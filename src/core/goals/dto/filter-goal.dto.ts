@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator'
 
 export enum GoalStatus {
   ACTIVE = 'active',
@@ -9,8 +9,8 @@ export enum GoalStatus {
 export class FilterGoalsDto {
   @IsOptional()
   @IsEnum(GoalStatus)
-  status?: GoalStatus;
+  status?: GoalStatus
 
   @IsOptional()
-  categoryId?: number;
+  categoryId?: number
 }
