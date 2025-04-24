@@ -7,8 +7,12 @@ const encryptPassword = (password: string) => {
 
 export const users: Prisma.UserCreateManyInput[] = [
   {
-    username: 'chu2409',
-    password: encryptPassword('123456'),
-    personId: 1,
+    firstName: 'Joshua',
+    lastName: 'Herrera',
+    email: 'sebas.herrera3152@gmail.com',
+    passwordHash: encryptPassword('123456'),
+    birthDate: new Date('2003-08-11'),
+    gender: "M",
+    profilePicture: 'https://randomuser.me/api/portraits',
   },
 ];
