@@ -6,6 +6,7 @@ import { GoalResponseDto } from './dto/goal-response.dto';
 import { PrismaService } from 'src/utils/prisma/prisma.service';
 import { FilterGoalsDto } from './dto/filter-goal.dto';
 import { FinancialCalculatorService } from 'src/financial-calculator/financial-calculator.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class GoalsService {
@@ -159,11 +160,11 @@ export class GoalsService {
       const targetAmount = updateGoalDto.targetAmount || parseFloat(existingGoal.targetAmount.toString());
       const deadline = updateGoalDto.deadline ? new Date(updateGoalDto.deadline) : existingGoal.deadline;
       
-      currentWeeklyTarget = this.financialCalculator.calculateCurrentWeeklyTarget(
+      currentWeeklyTarget = new Decimal(this.financialCalculator.calculateCurrentWeeklyTarget(
         targetAmount,
         parseFloat(existingGoal.currentAmount.toString()),
         deadline
-      );
+      ));
     }
 
     // Actualizar la meta
@@ -200,8 +201,8 @@ export class GoalsService {
 
     // Actualizar si la meta está en riesgo
     const isAtRisk = this.financialCalculator.isGoalAtRisk(
-      parseFloat(existingGoal.initialWeeklyTarget.toString()),
-      parseFloat(currentWeeklyTarget.toString())
+      parseFloat(existingGoal.initialWeeklyTarget?.toString() || '0'),
+      parseFloat(currentWeeklyTarget?.toString() || '0')
     );
 
     if (isAtRisk !== existingGoal.isAtRisk) {
@@ -281,7 +282,7 @@ export class GoalsService {
       );
 
       const isAtRisk = this.financialCalculator.isGoalAtRisk(
-        parseFloat(goal.initialWeeklyTarget.toString()),
+        parseFloat(goal.initialWeeklyTarget?.toString() || '0'),
         currentWeeklyTarget
       );
 

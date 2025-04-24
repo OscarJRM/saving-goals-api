@@ -1,4 +1,4 @@
-import { Goal } from "generated/prisma/client";
+import { Goal } from "@prisma/client";
 
 export class GoalResponseDto {
   id: number;

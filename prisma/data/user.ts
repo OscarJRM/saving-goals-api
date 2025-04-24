@@ -1,5 +1,5 @@
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from 'generated/prisma';
 
 const encryptPassword = (password: string) => {
   return bcrypt.hashSync(password, 12);

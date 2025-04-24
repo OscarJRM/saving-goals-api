@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { users } from './data/user';
-import { PrismaClient } from 'generated/prisma';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
