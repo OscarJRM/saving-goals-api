@@ -4,10 +4,12 @@ import { AppService } from './app.service'
 import { GoalsModule } from './core/goals/goals.module'
 import { FinancialCalculatorService } from './core/financial-calculator/financial-calculator.service'
 import { PrismaModule } from './global/prisma/prisma.module'
+import { CustomConfigModule } from './global/config/config.module'
+import { CustomConfigService } from './global/config/config.service'
 
 @Module({
-  imports: [GoalsModule, PrismaModule],
+  imports: [GoalsModule, PrismaModule, CustomConfigModule],
   controllers: [AppController],
-  providers: [AppService, FinancialCalculatorService],
+  providers: [AppService, FinancialCalculatorService, CustomConfigService],
 })
 export class AppModule {}
