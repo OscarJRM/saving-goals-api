@@ -10,7 +10,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AuthModule } from './core/auth/auth.module'
 import { ContributionModule } from './core/contribution/contribution.module'
 import { ScheduleModule } from '@nestjs/schedule'
-import { SuggestionModule } from './core/suggestion/suggestion.module';
+import { SuggestionModule } from './core/suggestion/suggestion.module'
 
 @Module({
   imports: [
