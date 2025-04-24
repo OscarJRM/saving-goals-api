@@ -11,6 +11,7 @@ import { AuthModule } from './core/auth/auth.module'
 import { ContributionModule } from './core/contribution/contribution.module'
 import { ScheduleModule } from '@nestjs/schedule'
 import { SuggestionModule } from './core/suggestion/suggestion.module'
+import { MailModule } from './services/mail/mail.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SuggestionModule } from './core/suggestion/suggestion.module'
     AuthModule,
     ContributionModule,
     SuggestionModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [
