@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Request } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { SignInDto } from './dto/sign-in.dto'
-import { Auth } from 'src/core/auth/decorators/auth.decorator'
+import { AdminAuth, Auth } from 'src/core/auth/decorators/auth.decorator'
 import { ApiBearerAuth } from '@nestjs/swagger'
 import { SignUpDto } from './dto/sign-up.dto'
 
@@ -23,7 +23,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @Auth()
+  @AdminAuth()
   getMe(@Request() req) {
     const user = req.user
     return user
