@@ -73,7 +73,7 @@ export class GoalResponseDto {
   })
   updatedAt: Date
 
-  constructor(goal: Goal) {
+  constructor(goal: Goal, progress: number) {
     this.id = goal.id
     this.userId = goal.userId
     this.categoryId = goal.categoryId
@@ -89,13 +89,8 @@ export class GoalResponseDto {
       : null
     this.currentAmount = parseFloat(goal.currentAmount.toString())
     this.isAtRisk = goal.isAtRisk
-    this.progress = this.calculateProgress()
+    this.progress = progress
     this.createdAt = goal.createdAt
     this.updatedAt = goal.updatedAt
-  }
-
-  private calculateProgress(): number {
-    if (this.targetAmount <= 0) return 0
-    return Math.min(100, (this.currentAmount / this.targetAmount) * 100)
   }
 }

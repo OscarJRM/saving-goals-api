@@ -1,4 +1,3 @@
-// src/modules/goals/goals.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -73,7 +72,12 @@ export class GoalsService {
       },
     })
 
-    return new GoalResponseDto(goal)
+    const progressNumber = this.financialCalculator.calculateProgress(
+      parseFloat(goal.currentAmount.toString()),
+      parseFloat(goal.targetAmount.toString()),
+    )
+
+    return new GoalResponseDto(goal, progressNumber)
   }
 
   /**
@@ -101,7 +105,16 @@ export class GoalsService {
       },
     })
 
-    return goals.map((goal) => new GoalResponseDto(goal))
+    const goalResponseDtos = await Promise.all(
+      goals.map((goal) => {
+        const progressNumber = this.financialCalculator.calculateProgress(
+          parseFloat(goal.currentAmount.toString()),
+          parseFloat(goal.targetAmount.toString()),
+        )
+        return new GoalResponseDto(goal, progressNumber)
+      }),
+    )
+    return goalResponseDtos
   }
 
   /**
@@ -130,7 +143,12 @@ export class GoalsService {
       throw new NotFoundException('Meta no encontrada')
     }
 
-    return new GoalResponseDto(goal)
+    const progressNumber = this.financialCalculator.calculateProgress(
+      parseFloat(goal.currentAmount.toString()),
+      parseFloat(goal.targetAmount.toString()),
+    )
+
+    return new GoalResponseDto(goal, progressNumber)
   }
 
   /**
@@ -238,7 +256,12 @@ export class GoalsService {
       })
     }
 
-    return new GoalResponseDto(updatedGoal)
+    const progressNumber = this.financialCalculator.calculateProgress(
+      parseFloat(updatedGoal.currentAmount.toString()),
+      parseFloat(updatedGoal.targetAmount.toString()),
+    )
+
+    return new GoalResponseDto(updatedGoal, progressNumber)
   }
 
   /**
