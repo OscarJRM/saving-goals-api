@@ -8,30 +8,109 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Person {
-  id             Int      @id @default(autoincrement()) @map("id")
-  email          String   @unique @map("email")
-  firstName      String   @map("first_name")
-  secondName     String?  @map("second_name")
-  firstSurname   String   @map("first_surname")
-  secondSurname  String?  @map("second_surname")
-  phoneNumbers   String[] @map("phone_numbers")
-  identification String   @map("identification")
-
-  user User?
-
-  @@index(email)
-  @@map("people")
-}
-
 model User {
-  id       Int     @id @default(autoincrement())
-  username String  @unique @map("username")
-  password String  @map("password")
-  active   Boolean @default(true) @map("active")
-
-  personId Int    @unique @map("person_id")
-  person   Person @relation(fields: [personId], references: [id])
+  id            Int      @id @default(autoincrement()) @map("user_id")
+  firstName     String   @map("first_name") @db.VarChar(50)
+  lastName      String   @map("last_name") @db.VarChar(50)
+  email         String   @unique @db.VarChar(100)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  profilePicture String?  @map("profile_picture") @db.VarChar(255)
+  gender        String?  @db.VarChar(20)
+  birthDate     DateTime? @map("birth_date") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  goals         Goal[]
 
   @@map("users")
+}
+
+model Category {
+  id          Int     @id @default(autoincrement()) @map("category_id")
+  name        String  @unique @db.VarChar(50)
+  description String?
+  icon        String? @db.VarChar(50)
+  goals       Goal[]
+
+  @@map("categories")
+}
+
+model Goal {
+  id                   Int           @id @default(autoincrement()) @map("goal_id")
+  userId               Int           @map("user_id")
+  categoryId           Int           @map("category_id")
+  name                 String        @db.VarChar(100)
+  targetAmount         Decimal       @map("target_amount") @db.Decimal(12, 2)
+  deadline             DateTime      @db.Date
+  status               String        @default("active") @db.VarChar(20)
+  initialWeeklyTarget  Decimal?      @map("initial_weekly_target") @db.Decimal(12, 2)
+  currentWeeklyTarget  Decimal?      @map("current_weekly_target") @db.Decimal(12, 2)
+  currentAmount        Decimal       @default(0) @map("current_amount") @db.Decimal(12, 2)
+  isAtRisk             Boolean       @default(false) @map("is_at_risk")
+  lastContributionDate DateTime?     @map("last_contribution_date")
+  lastRecalculationDate DateTime     @default(now()) @map("last_recalculation_date")
+  needsRecalculation   Boolean       @default(false) @map("needs_recalculation")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @default(now()) @updatedAt @map("updated_at")
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category             Category      @relation(fields: [categoryId], references: [id])
+  contributions        Contribution[]
+  reminders            Reminder[]
+  suggestions          Suggestion[]
+  achievements         Achievement[]
+
+  @@index([userId], name: "idx_goals_user_id")
+  @@map("goals")
+}
+
+model Contribution {
+  id                Int      @id @default(autoincrement()) @map("contribution_id")
+  goalId            Int      @map("goal_id")
+  amount            Decimal  @db.Decimal(12, 2)
+  contributionDate  DateTime @default(now()) @map("contribution_date") @db.Date
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  goal              Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId], name: "idx_contributions_goal_id")
+  @@map("contributions")
+}
+
+model Reminder {
+  id             Int      @id @default(autoincrement()) @map("reminder_id")
+  goalId         Int      @map("goal_id")
+  scheduledDate  DateTime @map("scheduled_date")
+  wasSent        Boolean  @default(false) @map("was_sent")
+  reminderType   String   @map("reminder_type") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  goal           Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId], name: "idx_reminders_goal_id")
+  @@map("reminders")
+}
+
+model Suggestion {
+  id               Int      @id @default(autoincrement()) @map("suggestion_id") 
+  goalId           Int      @map("goal_id")
+  message          String
+  suggestedAmount  Decimal? @map("suggested_amount") @db.Decimal(12, 2)
+  frequency        String   @db.VarChar(20)
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  goal             Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId], name: "idx_suggestions_goal_id")
+  @@map("suggestions")
+}
+
+model Achievement {
+  id           Int      @id @default(autoincrement()) @map("achievement_id")
+  goalId       Int      @map("goal_id")
+  type         String   @db.VarChar(30)
+  message      String
+  isRead       Boolean  @default(false) @map("is_read")
+  createdAt    DateTime @default(now()) @map("created_at")
+  goal         Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId], name: "idx_achievements_goal_id")
+  @@map("achievements")
 }
