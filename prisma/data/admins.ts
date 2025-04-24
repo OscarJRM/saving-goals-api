@@ -7,7 +7,7 @@ const encryptPassword = (password: string) => {
 
 export const admins: Prisma.AdminCreateManyInput[] = [
   {
-    name: 'Daniel',
+    firstName: 'Daniel',
     lastName: 'Zhu',
     email: 'dzhu2409@test.org',
     password: encryptPassword('123456'),

@@ -34,18 +34,34 @@ export class AuthService {
 
       this.verifyPassword(password, admin.password)
 
-      return this.createToken({
-        id: admin.id,
-        isAdmin: true,
-      })
+      return {
+        token: this.createToken({
+          id: admin.id,
+          isAdmin: true,
+        }),
+        user: {
+          id: admin.id,
+          email: admin.email,
+          firstName: admin.firstName,
+          lastName: admin.lastName,
+        },
+      }
     }
 
     this.verifyPassword(password, user.passwordHash)
 
-    return this.createToken({
-      id: user.id,
-      isAdmin: false,
-    })
+    return {
+      token: this.createToken({
+        id: user.id,
+        isAdmin: false,
+      }),
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    }
   }
 
   async signUp(dto: SignUpDto) {

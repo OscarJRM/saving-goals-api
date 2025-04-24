@@ -24,11 +24,11 @@ model User {
 }
 
 model Admin {
-  id       Int    @id @default(autoincrement())
-  email    String @unique @map("email")
-  password String @map("password")
-  name     String @map("name")
-  lastName String @map("last_name")
+  id        Int    @id @default(autoincrement())
+  email     String @unique @map("email")
+  password  String @map("password")
+  firstName String @map("first_name")
+  lastName  String @map("last_name")
 
   @@map("admins")
 }
