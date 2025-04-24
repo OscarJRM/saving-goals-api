@@ -7,9 +7,10 @@ import { PrismaModule } from './global/prisma/prisma.module'
 import { CustomConfigModule } from './global/config/config.module'
 import { CustomConfigService } from './global/config/config.service'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+import { AuthModule } from './core/auth/auth.module'
 
 @Module({
-  imports: [GoalsModule, PrismaModule, CustomConfigModule],
+  imports: [GoalsModule, PrismaModule, CustomConfigModule, AuthModule],
   controllers: [AppController],
   providers: [
     AppService,
