@@ -44,12 +44,12 @@ export class ContributionService {
   async create(createContributionDto: CreateContributionDto) {
     // Find the associated goal
     const goal = await this.prisma.goal.findUnique({
-      where: { id: createContributionDto.goal_id },
+      where: { id: createContributionDto.goalId },
     })
 
     if (!goal) {
       throw new NotFoundException(
-        `Goal with ID ${createContributionDto.goal_id} not found`,
+        `Goal with ID ${createContributionDto.goalId} not found`,
       )
     }
 
@@ -64,9 +64,11 @@ export class ContributionService {
       // Create the contribution
       const contribution = await prisma.contribution.create({
         data: {
-          ...createContributionDto,
+          amount: createContributionDto.amount,
+          contributionDate: createContributionDto.contributionDate,
+          notes: createContributionDto.notes,
           goal: {
-            connect: { id: createContributionDto.goal_id },
+            connect: { id: createContributionDto.goalId },
           },
         },
       })

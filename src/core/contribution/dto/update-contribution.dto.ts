@@ -28,7 +28,7 @@ export class UpdateContributionDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  contribution_date?: Date
+  contributionDate?: Date
 
   @ApiProperty({
     description: 'Optional notes about the contribution',

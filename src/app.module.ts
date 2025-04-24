@@ -8,10 +8,18 @@ import { CustomConfigModule } from './global/config/config.module'
 import { CustomConfigService } from './global/config/config.service'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AuthModule } from './core/auth/auth.module'
-import { ContributionModule } from './core/contribution/contribution.module';
+import { ContributionModule } from './core/contribution/contribution.module'
+import { ScheduleModule } from '@nestjs/schedule'
 
 @Module({
-  imports: [GoalsModule, PrismaModule, CustomConfigModule, AuthModule, ContributionModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    GoalsModule,
+    PrismaModule,
+    CustomConfigModule,
+    AuthModule,
+    ContributionModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

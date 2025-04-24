@@ -16,7 +16,7 @@ export class CreateContributionDto {
   })
   @IsNotEmpty()
   @IsNumber()
-  goal_id: number
+  goalId: number
 
   @ApiProperty({
     description: 'Contribution amount',
@@ -36,7 +36,7 @@ export class CreateContributionDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  contribution_date?: Date
+  contributionDate?: Date
 
   @ApiProperty({
     description: 'Optional notes about the contribution',
