@@ -6,10 +6,16 @@ import { FinancialCalculatorService } from './core/financial-calculator/financia
 import { PrismaModule } from './global/prisma/prisma.module'
 import { CustomConfigModule } from './global/config/config.module'
 import { CustomConfigService } from './global/config/config.service'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 @Module({
   imports: [GoalsModule, PrismaModule, CustomConfigModule],
   controllers: [AppController],
-  providers: [AppService, FinancialCalculatorService, CustomConfigService],
+  providers: [
+    AppService,
+    FinancialCalculatorService,
+    CustomConfigService,
+    ResponseInterceptor,
+  ],
 })
 export class AppModule {}
