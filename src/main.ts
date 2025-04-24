@@ -4,6 +4,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { Logger, ValidationPipe } from '@nestjs/common'
 import { useContainer } from 'class-validator'
 import { CustomConfigService } from './global/config/config.service'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+import { GlobalExceptionFilter } from './common/filters/all-exception.filter'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: true })
@@ -15,8 +17,8 @@ async function bootstrap() {
     }),
   )
   app.enableCors('*')
-  // app.useGlobalInterceptors(app.get(ResponseInterceptor))
-  // app.useGlobalFilters(new GlobalExceptionFilter())
+  app.useGlobalInterceptors(app.get(ResponseInterceptor))
+  app.useGlobalFilters(new GlobalExceptionFilter())
   useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
   const config = new DocumentBuilder()
