@@ -13,7 +13,6 @@ import { IApiRes } from '../types/api-response.interface'
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()

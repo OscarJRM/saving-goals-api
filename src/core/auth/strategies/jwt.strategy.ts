@@ -2,15 +2,19 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { IJwtPayload } from '../types/jwt-payload.interface'
-import { User } from '@prisma/client'
-import { PrismaService } from 'src/global/prisma/prisma.service'
+import { Admin, User } from '@prisma/client'
 import { Request } from 'express'
+import { AuthService } from '../auth.service'
+import { CustomConfigService } from 'src/global/config/config.service'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private readonly prismaService: PrismaService) {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: CustomConfigService,
+  ) {
     super({
-      secretOrKey: process.env.JWT_SECRET!,
+      secretOrKey: configService.env.JWT_SECRET,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     })
   }
@@ -23,16 +27,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super.authenticate(req, options)
   }
 
-  async validate(payload: IJwtPayload): Promise<User> {
-    const { id } = payload
+  async validate(payload: IJwtPayload): Promise<User | Admin> {
+    const userOrAdmin = await this.authService.validateUser(
+      payload.id,
+      payload.isAdmin,
+    )
 
-    const user = await this.prismaService.user.findUnique({ where: { id } })
+    if (!userOrAdmin) throw new UnauthorizedException('Token not valid')
 
-    if (!user) throw new UnauthorizedException('Token not valid')
-
-    // if (!user.active)
-    //   throw new UnauthorizedException('User is inactive, talk with an admin')
-
-    return user
+    return userOrAdmin
   }
 }

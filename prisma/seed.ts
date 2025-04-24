@@ -1,13 +1,18 @@
 import { Logger } from '@nestjs/common'
-import { users } from './data/user'
+import { users } from './data/users'
 import { PrismaClient } from '@prisma/client'
-import { categories } from './data/category'
+import { categories } from './data/categories'
+import { admins } from './data/admins'
 
 const prisma = new PrismaClient()
 
 const main = async () => {
   await prisma.user.createMany({
     data: users,
+  })
+
+  await prisma.admin.createMany({
+    data: admins,
   })
 
   await prisma.category.createMany({
