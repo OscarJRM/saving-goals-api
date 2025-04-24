@@ -23,10 +23,11 @@ import {
 } from '@nestjs/swagger'
 import { User } from 'src/common/decorators/user.decorator'
 import { FilterGoalsDto } from './dto/filter-goal.dto'
+import { Auth } from '../auth/decorators/auth.decorator'
 
 @ApiTags('goals')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
+@Auth()
 @Controller('goals')
 export class GoalsController {
   constructor(private readonly goalsService: GoalsService) {}
