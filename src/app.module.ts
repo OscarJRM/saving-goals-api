@@ -10,6 +10,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AuthModule } from './core/auth/auth.module'
 import { ContributionModule } from './core/contribution/contribution.module'
 import { ScheduleModule } from '@nestjs/schedule'
+import { MailModule } from './services/mail/mail.module'
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule'
     CustomConfigModule,
     AuthModule,
     ContributionModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [
