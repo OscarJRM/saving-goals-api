@@ -14,7 +14,7 @@ import { SuggestionModule } from './core/suggestion/suggestion.module'
 import { MailModule } from './services/mail/mail.module'
 import { PdfModule } from './services/pdf/pdf.module'
 import { ScheduledTasksService } from './global/cronjob/scheduled-task/scheduled-task.service'
-import { WithdrawModule } from './core/withdraw/withdraw.module';
+import { WithdrawModule } from './core/withdraw/withdraw.module'
 
 @Module({
   imports: [
