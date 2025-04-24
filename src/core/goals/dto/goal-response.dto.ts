@@ -1,19 +1,76 @@
+import { ApiResponseProperty } from '@nestjs/swagger'
 import { Goal } from '@prisma/client'
 
 export class GoalResponseDto {
+  @ApiResponseProperty({
+    example: 1,
+    type: Number,
+  })
   id: number
+  @ApiResponseProperty({
+    example: 1,
+    type: Number,
+  })
   userId: number
+  @ApiResponseProperty({
+    example: 1,
+    type: Number,
+  })
   categoryId: number
+  @ApiResponseProperty({
+    example: 'Ahorro para vacaciones',
+    type: String,
+  })
   name: string
+  @ApiResponseProperty({
+    example: 12345,
+    type: Number,
+  })
   targetAmount: number
+  @ApiResponseProperty({
+    example: '2025-12-31',
+    type: Date,
+  })
   deadline: Date
+  @ApiResponseProperty({
+    example: 'active',
+    type: String,
+  })
   status: string
+  @ApiResponseProperty({
+    example: 100,
+    type: Number,
+  })
   initialWeeklyTarget: number | null
+  @ApiResponseProperty({
+    example: 50,
+    type: Number,
+  })
   currentWeeklyTarget: number | null
+  @ApiResponseProperty({
+    example: 5000,
+    type: Number,
+  })
   currentAmount: number
+  @ApiResponseProperty({
+    example: false,
+    type: Boolean,
+  })
   isAtRisk: boolean
+  @ApiResponseProperty({
+    example: 50,
+    type: Number,
+  })
   progress: number
+  @ApiResponseProperty({
+    example: '2023-10-01T00:00:00.000Z',
+    type: Date,
+  })
   createdAt: Date
+  @ApiResponseProperty({
+    example: '2023-10-01T00:00:00.000Z',
+    type: Date,
+  })
   updatedAt: Date
 
   constructor(goal: Goal) {
