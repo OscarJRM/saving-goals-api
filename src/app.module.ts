@@ -13,6 +13,7 @@ import { ScheduleModule } from '@nestjs/schedule'
 import { SuggestionModule } from './core/suggestion/suggestion.module'
 import { MailModule } from './services/mail/mail.module'
 import { PdfModule } from './services/pdf/pdf.module'
+import { ScheduledTasksService } from './global/cronjob/scheduled-task/scheduled-task.service'
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { PdfModule } from './services/pdf/pdf.module'
     FinancialCalculatorService,
     CustomConfigService,
     ResponseInterceptor,
+    ScheduledTasksService,
   ],
 })
 export class AppModule {}

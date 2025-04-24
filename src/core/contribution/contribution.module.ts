@@ -5,5 +5,6 @@ import { ContributionController } from './contribution.controller'
 @Module({
   controllers: [ContributionController],
   providers: [ContributionService],
+  exports: [ContributionService],
 })
 export class ContributionModule {}
