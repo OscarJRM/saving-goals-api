@@ -19,6 +19,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger'
 import { User } from 'src/common/decorators/user.decorator'
 import { FilterGoalsDto } from './dto/filter-goal.dto'
@@ -32,6 +33,10 @@ export class GoalsController {
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva meta de ahorro' })
+  @ApiBody({
+    type: CreateGoalDto,
+    description: 'Datos de la meta a crear',
+  })
   @ApiResponse({
     status: 201,
     description: 'Meta creada exitosamente',
