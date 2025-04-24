@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    .invoice-header { color: #2c3e50; border-bottom: 2px solid #eee; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 10px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1 class="invoice-header">Factura #{{invoiceNumber}}</h1>
+  <p>Cliente: <strong>{{client.name}}</strong></p>
+  
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Precio</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{this.name}}</td>
+        <td>${{this.price}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  <p>Total: <strong>${{total}}</strong></p>
+</body>
+</html>

@@ -11,6 +11,7 @@ import { AuthModule } from './core/auth/auth.module'
 import { ContributionModule } from './core/contribution/contribution.module'
 import { ScheduleModule } from '@nestjs/schedule'
 import { MailModule } from './services/mail/mail.module'
+import { PdfModule } from './services/pdf/pdf.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MailModule } from './services/mail/mail.module'
     AuthModule,
     ContributionModule,
     MailModule,
+    PdfModule,
   ],
   controllers: [AppController],
   providers: [
