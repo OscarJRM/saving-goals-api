@@ -8,6 +8,8 @@ export const config = (): { APP: IConfig } => ({
     JWT_SECRET: process.env.JWT_SECRET!,
     GMAIL_USER: process.env.GMAIL_USER!,
     GMAIL_PASSWORD: process.env.GMAIL_PASSWORD!,
+    IA_API_KEY: process.env.IA_API_KEY!,
+    IA_API_URL: process.env.IA_API_URL!,
   },
 })
 
@@ -17,4 +19,6 @@ export const configValidationSchema = Joi.object<IConfig>({
   JWT_SECRET: Joi.string().required(),
   GMAIL_USER: Joi.string().email().required(),
   GMAIL_PASSWORD: Joi.string().required(),
+  IA_API_KEY: Joi.string().required(),
+  IA_API_URL: Joi.string().uri().required(),
 })
