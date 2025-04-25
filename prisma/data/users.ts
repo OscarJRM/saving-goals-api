@@ -9,7 +9,7 @@ export const users: Prisma.UserCreateManyInput[] = [
   {
     firstName: 'Joshua',
     lastName: 'Herrera',
-    email: 'sebas.herrera3152@gmail.com',
+    email: 'ericktpa1@gmail.com',
     passwordHash: encryptPassword('123456'),
     birthDate: new Date('2003-08-11'),
     gender: 'M',

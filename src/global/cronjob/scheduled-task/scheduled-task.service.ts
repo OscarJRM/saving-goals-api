@@ -30,11 +30,11 @@ export class ScheduledTasksService {
     await this.goalsService.checkExpiredGoals()
   }
 
-  @Cron(CronExpression.EVERY_WEEK)
-  async handleWeeklyTargetRecalculation() {
-    this.logger.log('Running scheduled weekly target recalculation...')
-    await this.goalsService.recalculateWeeklyTargets()
-  }
+  // @Cron(CronExpression.EVERY_WEEK)
+  // async handleWeeklyTargetRecalculation() {
+  //   this.logger.log('Running scheduled weekly target recalculation...')
+  //   await this.goalsService.recalculateWeeklyTargets()
+  // }
 
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async handleInactivityDetection() {
