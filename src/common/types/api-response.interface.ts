@@ -6,13 +6,5 @@ export interface IApiMessage {
 export interface IApiRes<T> {
   success: boolean
   message: IApiMessage
-  data: T | null
-}
-
-export interface IApiPaginatedRes<T> {
-  total: number
-  limit: number
-  page: number
-  pages: number
-  records: T[]
+  data: T | T[] | null
 }

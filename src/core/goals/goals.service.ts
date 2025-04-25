@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common'
 import { CreateGoalDto } from './dto/create-goal.dto'
 import { UpdateGoalDto } from './dto/update-goal.dto'
-import { GoalResponseDto } from './dto/goal-response.dto'
 import { FilterGoalsDto } from './dto/filter-goal.dto'
 import { FinancialCalculatorService } from 'src/core/financial-calculator/financial-calculator.service'
 import { Decimal } from '@prisma/client/runtime/library'
@@ -21,10 +20,7 @@ export class GoalsService {
   /**
    * Crea una nueva meta de ahorro
    */
-  async create(
-    userId: number,
-    createGoalDto: CreateGoalDto,
-  ): Promise<GoalResponseDto> {
+  async create(userId: number, createGoalDto: CreateGoalDto) {
     // Verificar que la fecha límite sea en el futuro
     const currentDate = new Date()
     if (new Date(createGoalDto.deadline) <= currentDate) {
@@ -77,16 +73,16 @@ export class GoalsService {
       parseFloat(goal.targetAmount.toString()),
     )
 
-    return new GoalResponseDto(goal, progressNumber)
+    return {
+      ...goal,
+      progress: progressNumber,
+    }
   }
 
   /**
    * Obtiene todas las metas de un usuario, con filtros opcionales
    */
-  async findAll(
-    userId: number,
-    filterDto?: FilterGoalsDto,
-  ): Promise<GoalResponseDto[]> {
+  async findAll(userId: number, filterDto?: FilterGoalsDto) {
     const filter: any = { userId }
 
     if (filterDto?.status) {
@@ -111,7 +107,10 @@ export class GoalsService {
           parseFloat(goal.currentAmount.toString()),
           parseFloat(goal.targetAmount.toString()),
         )
-        return new GoalResponseDto(goal, progressNumber)
+        return {
+          ...goal,
+          progress: progressNumber,
+        }
       }),
     )
     return goalResponseDtos
@@ -120,7 +119,7 @@ export class GoalsService {
   /**
    * Obtiene una meta específica por ID
    */
-  async findOne(userId: number, goalId: number): Promise<GoalResponseDto> {
+  async findOne(userId: number, goalId: number) {
     const goal = await this.prisma.goal.findFirst({
       where: {
         id: goalId,
@@ -148,17 +147,16 @@ export class GoalsService {
       parseFloat(goal.targetAmount.toString()),
     )
 
-    return new GoalResponseDto(goal, progressNumber)
+    return {
+      ...goal,
+      progress: progressNumber,
+    }
   }
 
   /**
    * Actualiza una meta existente
    */
-  async update(
-    userId: number,
-    goalId: number,
-    updateGoalDto: UpdateGoalDto,
-  ): Promise<GoalResponseDto> {
+  async update(userId: number, goalId: number, updateGoalDto: UpdateGoalDto) {
     // Verificar que la meta existe y pertenece al usuario
     const existingGoal = await this.prisma.goal.findFirst({
       where: {
@@ -261,13 +259,16 @@ export class GoalsService {
       parseFloat(updatedGoal.targetAmount.toString()),
     )
 
-    return new GoalResponseDto(updatedGoal, progressNumber)
+    return {
+      ...updatedGoal,
+      progress: progressNumber,
+    }
   }
 
   /**
    * Elimina una meta existente
    */
-  async remove(userId: number, goalId: number): Promise<void> {
+  async remove(userId: number, goalId: number) {
     // Verificar que la meta existe y pertenece al usuario
     const existingGoal = await this.prisma.goal.findFirst({
       where: {
@@ -290,7 +291,7 @@ export class GoalsService {
   /**
    * Verifica y actualiza el estado de las metas vencidas
    */
-  async checkExpiredGoals(): Promise<void> {
+  async checkExpiredGoals() {
     const currentDate = new Date()
 
     // Buscar metas activas con fecha límite vencida
@@ -315,7 +316,7 @@ export class GoalsService {
   /**
    * Recalcula los objetivos semanales para todas las metas que lo necesitan
    */
-  async recalculateWeeklyTargets(): Promise<void> {
+  async recalculateWeeklyTargets() {
     const goalsNeedingRecalculation = await this.prisma.goal.findMany({
       where: {
         status: 'active',

@@ -44,10 +44,7 @@ export class GoalsController {
     type: GoalResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  create(
-    @User('id') userId: number,
-    @Body() createGoalDto: CreateGoalDto,
-  ): Promise<GoalResponseDto> {
+  create(@User('id') userId: number, @Body() createGoalDto: CreateGoalDto) {
     return this.goalsService.create(userId, createGoalDto)
   }
 
@@ -58,10 +55,7 @@ export class GoalsController {
     description: 'Lista de metas obtenida',
     type: [GoalResponseDto],
   })
-  findAll(
-    @User('id') userId: number,
-    @Query() filterDto: FilterGoalsDto,
-  ): Promise<GoalResponseDto[]> {
+  findAll(@User('id') userId: number, @Query() filterDto: FilterGoalsDto) {
     return this.goalsService.findAll(userId, filterDto)
   }
 
@@ -76,7 +70,7 @@ export class GoalsController {
   findOne(
     @User('id') userId: number,
     @Param('id', ParseIntPipe) goalId: number,
-  ): Promise<GoalResponseDto> {
+  ) {
     return this.goalsService.findOne(userId, goalId)
   }
 
@@ -93,7 +87,7 @@ export class GoalsController {
     @User('id') userId: number,
     @Param('id', ParseIntPipe) goalId: number,
     @Body() updateGoalDto: UpdateGoalDto,
-  ): Promise<GoalResponseDto> {
+  ) {
     return this.goalsService.update(userId, goalId, updateGoalDto)
   }
 
