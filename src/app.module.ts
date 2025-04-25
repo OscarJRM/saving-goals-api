@@ -15,6 +15,7 @@ import { MailModule } from './services/mail/mail.module'
 import { PdfModule } from './services/pdf/pdf.module'
 import { ScheduledTasksService } from './global/cronjob/scheduled-task/scheduled-task.service'
 import { WithdrawModule } from './core/withdraw/withdraw.module'
+import { ExcelModule } from './services/excel/excel.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { WithdrawModule } from './core/withdraw/withdraw.module'
     MailModule,
     PdfModule,
     WithdrawModule,
+    ExcelModule,
   ],
   controllers: [AppController],
   providers: [
