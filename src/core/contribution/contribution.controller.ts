@@ -23,6 +23,8 @@ import { Auth } from '../auth/decorators/auth.decorator'
 import { ContributionResponseDto } from './dto/contribution-response.dto'
 import { CreateContributionDto } from './dto/create-contribution.dto'
 import { UpdateContributionDto } from './dto/update-contribution.dto'
+import { User } from 'src/common/decorators/user.decorator'
+import { type User as IUser } from '@prisma/client'
 
 @ApiTags('contributions')
 @ApiBearerAuth()
@@ -38,8 +40,8 @@ export class ContributionController {
     description: 'Returns all contributions',
     type: [ContributionResponseDto],
   })
-  async findAll() {
-    return this.contributionService.findAll()
+  async findAll(@User() user: IUser) {
+    return this.contributionService.findAll(user.id)
   }
 
   @Get('goal/:goalId')

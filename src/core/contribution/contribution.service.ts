@@ -13,8 +13,13 @@ export class ContributionService {
   constructor(private prisma: PrismaService) {}
 
   // CRUD Operations
-  async findAll() {
+  async findAll(userId: number) {
     return this.prisma.contribution.findMany({
+      where: {
+        goal: {
+          userId,
+        },
+      },
       include: {
         goal: true,
       },

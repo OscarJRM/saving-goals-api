@@ -10,8 +10,12 @@ import {
 import { WithdrawService } from './withdraw.service'
 import { CreateWithdrawDto } from './dto/create-withdraw.dto'
 import { UpdateWithdrawDto } from './dto/update-withdraw.dto'
+import { type User as IUser } from '@prisma/client'
+import { User } from 'src/common/decorators/user.decorator'
+import { Auth } from '../auth/decorators/auth.decorator'
 
 @Controller('withdraw')
+@Auth()
 export class WithdrawController {
   constructor(private readonly withdrawService: WithdrawService) {}
 
@@ -21,8 +25,8 @@ export class WithdrawController {
   }
 
   @Get()
-  findAll() {
-    return this.withdrawService.findAll()
+  findAll(@User() user: IUser) {
+    return this.withdrawService.findAll(user.id)
   }
 
   @Get('goal/:goalId')

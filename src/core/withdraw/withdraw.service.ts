@@ -13,8 +13,13 @@ export class WithdrawService {
   constructor(private prisma: PrismaService) {}
 
   // CRUD Operations
-  async findAll() {
+  async findAll(userId: number) {
     return await this.prisma.withdrawal.findMany({
+      where: {
+        goal: {
+          userId,
+        },
+      },
       include: {
         goal: true,
       },
