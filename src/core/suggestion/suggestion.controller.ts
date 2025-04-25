@@ -34,8 +34,6 @@ export class SuggestionController {
   async findAllByGoal(
     @Param('goalId', ParseIntPipe) goalId: number,
   ): Promise<SuggestionResponseDto[]> {
-    console.log('goalId', typeof goalId)
-
     return (await this.suggestionService.findAllByGoal(goalId)).map(
       (suggestion) => ({
         ...suggestion,
