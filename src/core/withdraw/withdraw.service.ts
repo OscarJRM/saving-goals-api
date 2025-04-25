@@ -18,6 +18,7 @@ export class WithdrawService {
       include: {
         goal: true,
       },
+      orderBy: { withdrawalDate: 'desc' },
     })
   }
 
@@ -42,6 +43,11 @@ export class WithdrawService {
   }
 
   async create(createWithdrawalDto: CreateWithdrawDto) {
+    // Validate withdrawal amount is positive
+    if (createWithdrawalDto.amount <= 0) {
+      throw new BadRequestException('Withdrawal amount must be greater than 0')
+    }
+
     // Find the associated goal
     const goal = await this.prisma.goal.findUnique({
       where: { id: createWithdrawalDto.goalId },
@@ -68,22 +74,41 @@ export class WithdrawService {
 
     // Use transaction to ensure data consistency
     return this.prisma.$transaction(async (prisma) => {
-      // Create the withdrawal
+      // Create the withdrawal with validated date
       const withdrawal = await prisma.withdrawal.create({
         data: {
           amount: createWithdrawalDto.amount,
           withdrawalDate: createWithdrawalDto.withdrawalDate || new Date(),
-          notes: createWithdrawalDto.notes,
+          notes: createWithdrawalDto.notes || '',
           goal: {
             connect: { id: createWithdrawalDto.goalId },
           },
         },
       })
 
-      console.log('Withdrawal created:', typeof withdrawal)
+      // Calculate new current amount after withdrawal
+      const newCurrentAmount =
+        goal.currentAmount.toNumber() - withdrawal.amount.toNumber()
 
-      // Update goal's current amount
-      await this.updateGoalAfterWithdrawal(prisma, goal, withdrawal.amount)
+      // Prepare goal update data
+      const updateData: Prisma.GoalUpdateInput = {
+        currentAmount: newCurrentAmount,
+        needsRecalculation: true, // Flag for recalculation
+      }
+
+      // Update goal status if needed
+      if (
+        goal.status === 'completed' &&
+        newCurrentAmount < goal.targetAmount.toNumber()
+      ) {
+        updateData.status = 'active' // Goal is no longer completed
+      }
+
+      // Update the goal
+      await prisma.goal.update({
+        where: { id: goal.id },
+        data: updateData,
+      })
 
       // Check if this is the first withdrawal to create achievement
       const withdrawalCount = await prisma.withdrawal.count({
@@ -99,15 +124,81 @@ export class WithdrawService {
         )
       }
 
+      // Calculate new weekly target after withdrawal
+      const remainingAmount = goal.targetAmount.toNumber() - newCurrentAmount
+      const currentDate = new Date()
+      const deadline = new Date(goal.deadline)
+      const msPerWeek = 1000 * 60 * 60 * 24 * 7
+      const weeksLeft = Math.max(
+        1,
+        Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
+      )
+      const newWeeklyTarget = remainingAmount / weeksLeft
+
+      // Update suggestions
+      await prisma.suggestion.updateMany({
+        where: { goalId: goal.id, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create new suggestion with updated target
+      await prisma.suggestion.create({
+        data: {
+          goalId: goal.id,
+          message: `Después de tu retiro, para alcanzar tu meta a tiempo, deberías ahorrar $${newWeeklyTarget.toFixed(2)} por semana.`,
+          suggestedAmount: newWeeklyTarget,
+          frequency: 'weekly',
+          isActive: true,
+        },
+      })
+
       return withdrawal
     })
   }
 
   async update(id: number, updateWithdrawalDto: UpdateWithdrawDto) {
+    // Validate amount if provided
+    if (
+      updateWithdrawalDto.amount !== undefined &&
+      updateWithdrawalDto.amount <= 0
+    ) {
+      throw new BadRequestException('Withdrawal amount must be greater than 0')
+    }
+
     const withdrawal = await this.findOne(id)
     const oldAmount = withdrawal.amount
 
     return this.prisma.$transaction(async (prisma) => {
+      // Get the goal first to validate changes
+      const goal = await prisma.goal.findUnique({
+        where: { id: withdrawal.goalId },
+      })
+
+      if (!goal) {
+        throw new NotFoundException(
+          `Goal with ID ${withdrawal.goalId} not found`,
+        )
+      }
+
+      // If amount is changing, check if new amount is valid
+      if (
+        updateWithdrawalDto.amount &&
+        updateWithdrawalDto.amount !== oldAmount.toNumber()
+      ) {
+        const amountDifference =
+          updateWithdrawalDto.amount - oldAmount.toNumber()
+
+        // If increasing withdrawal amount, verify there's enough balance
+        if (
+          amountDifference > 0 &&
+          amountDifference > goal.currentAmount.toNumber()
+        ) {
+          throw new BadRequestException(
+            'Increased withdrawal amount exceeds current goal balance',
+          )
+        }
+      }
+
       // Update withdrawal
       const updatedWithdrawal = await prisma.withdrawal.update({
         where: { id },
@@ -116,32 +207,49 @@ export class WithdrawService {
 
       // If amount changed, update the goal's current amount
       if (oldAmount.toString() !== updatedWithdrawal.amount.toString()) {
-        const goal = await prisma.goal.findUnique({
-          where: { id: withdrawal.goalId },
-        })
+        // Calculate the difference in withdrawal amount
+        const amountDifference =
+          updatedWithdrawal.amount.toNumber() - oldAmount.toNumber()
 
-        if (goal) {
-          // Calculate the difference in withdrawal amount
-          const amountDifference =
-            updatedWithdrawal.amount.toNumber() - oldAmount.toNumber()
+        // Calculate new current amount
+        const newCurrentAmount =
+          goal.currentAmount.toNumber() - amountDifference
 
-          // If the new withdrawal amount is higher, make sure there's enough balance
-          if (
-            amountDifference > 0 &&
-            amountDifference > goal.currentAmount.toNumber()
-          ) {
-            throw new BadRequestException(
-              'Increased withdrawal amount exceeds current goal balance',
-            )
-          }
+        // Prepare update data
+        const updateData: Prisma.GoalUpdateInput = {
+          currentAmount: newCurrentAmount,
+          needsRecalculation: true,
+        }
 
-          // Adjust the goal amount by the negative difference (opposite of contribution)
-          await this.updateGoalAfterWithdrawalUpdate(
+        // Update goal status if needed
+        if (
+          goal.status === 'completed' &&
+          newCurrentAmount < goal.targetAmount.toNumber()
+        ) {
+          updateData.status = 'active' // Goal is no longer completed
+        } else if (
+          goal.status === 'active' &&
+          newCurrentAmount >= goal.targetAmount.toNumber()
+        ) {
+          updateData.status = 'completed' // Goal is now completed
+
+          // Create achievement for completion
+          await this.createAchievement(
             prisma,
-            goal,
-            amountDifference,
+            goal.id,
+            'goal_completed',
+            `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
           )
         }
+
+        // Update the goal
+        await prisma.goal.update({
+          where: { id: goal.id },
+          data: updateData,
+        })
+
+        // Update suggestions
+        await this.updateSuggestions(prisma, goal, newCurrentAmount)
       }
 
       return updatedWithdrawal
@@ -162,12 +270,48 @@ export class WithdrawService {
         )
       }
 
-      // Update the goal's current amount by adding back the withdrawal amount
-      await this.updateGoalAfterWithdrawalRemoval(
+      // Calculate new current amount after removing the withdrawal
+      const newCurrentAmount =
+        goal.currentAmount.toNumber() + withdrawal.amount.toNumber()
+
+      // Prepare update data
+      const updateData: Prisma.GoalUpdateInput = {
+        currentAmount: newCurrentAmount,
+        needsRecalculation: true,
+      }
+
+      // Check if goal status needs to change
+      if (
+        goal.status === 'active' &&
+        newCurrentAmount >= goal.targetAmount.toNumber()
+      ) {
+        updateData.status = 'completed'
+
+        // Create achievement for completion
+        await this.createAchievement(
+          prisma,
+          goal.id,
+          'goal_completed',
+          `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
+        )
+      }
+
+      // Update the goal
+      await prisma.goal.update({
+        where: { id: goal.id },
+        data: updateData,
+      })
+
+      // Create an achievement for the removal
+      await this.createAchievement(
         prisma,
-        goal,
-        withdrawal.amount,
+        goal.id,
+        'on_track',
+        `Has eliminado un retiro de $${withdrawal.amount.toString()}.`,
       )
+
+      // Update suggestions
+      await this.updateSuggestions(prisma, goal, newCurrentAmount)
 
       // Delete the withdrawal
       return prisma.withdrawal.delete({
@@ -176,101 +320,47 @@ export class WithdrawService {
     })
   }
 
-  // Helper methods for goal updates
-  private async updateGoalAfterWithdrawal(
+  // Helper methods
+  private async updateSuggestions(
     prisma: Prisma.TransactionClient,
     goal: Goal,
-    withdrawalAmount: Prisma.Decimal,
+    newCurrentAmount: number,
   ) {
-    // Calculate new current amount (decrease because it's a withdrawal)
-    const newCurrentAmount =
-      goal.currentAmount.toNumber() - withdrawalAmount.toNumber()
+    // Deactivate current suggestions
+    await prisma.suggestion.updateMany({
+      where: { goalId: goal.id, isActive: true },
+      data: { isActive: false },
+    })
 
-    // Update goal data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      needsRecalculation: true, // Flag for recalculation
+    // If goal is completed, no need to create new suggestion
+    if (newCurrentAmount >= goal.targetAmount.toNumber()) {
+      return
     }
 
-    // If goal was completed but now has less than target amount, change status back to active
-    if (
-      goal.status === 'completed' &&
-      newCurrentAmount < goal.targetAmount.toNumber()
-    ) {
-      updateData.status = 'active'
-    }
+    // Calculate remaining amount and weeks
+    const remainingAmount = goal.targetAmount.toNumber() - newCurrentAmount
+    const currentDate = new Date()
+    const deadline = new Date(goal.deadline)
+    const msPerWeek = 1000 * 60 * 60 * 24 * 7
+    const weeksLeft = Math.max(
+      1,
+      Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
+    )
+    const newWeeklyTarget = remainingAmount / weeksLeft
 
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
+    // Create new suggestion
+    await prisma.suggestion.create({
+      data: {
+        goalId: goal.id,
+        message: `Para alcanzar tu meta a tiempo, deberías ahorrar $${newWeeklyTarget.toFixed(2)} por semana.`,
+        suggestedAmount: newWeeklyTarget,
+        frequency: 'weekly',
+        isActive: true,
+      },
     })
   }
 
-  private async updateGoalAfterWithdrawalUpdate(
-    prisma: Prisma.TransactionClient,
-    goal: Goal,
-    amountDifference: number,
-  ) {
-    // Calculate new current amount (decrease by difference)
-    const newCurrentAmount = goal.currentAmount.toNumber() - amountDifference
-
-    // Update goal data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      needsRecalculation: true,
-    }
-
-    // Check if goal status needs to change after update
-    if (
-      goal.status === 'completed' &&
-      newCurrentAmount < goal.targetAmount.toNumber()
-    ) {
-      updateData.status = 'active'
-    }
-
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
-    })
-  }
-
-  private async updateGoalAfterWithdrawalRemoval(
-    prisma: Prisma.TransactionClient,
-    goal: Goal,
-    withdrawalAmount: Prisma.Decimal,
-  ) {
-    // Calculate new current amount (increase because we're removing a withdrawal)
-    const newCurrentAmount =
-      goal.currentAmount.toNumber() + withdrawalAmount.toNumber()
-
-    // Prepare update data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      needsRecalculation: true,
-    }
-
-    // If goal is now meeting the target amount, update status to completed
-    if (
-      goal.status === 'active' &&
-      newCurrentAmount >= goal.targetAmount.toNumber()
-    ) {
-      updateData.status = 'completed'
-
-      await this.createAchievement(
-        prisma,
-        goal.id,
-        'goal_completed',
-        `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
-      )
-    }
-
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
-    })
-  }
-
-  // Achievement tracking
+  // Achievement creation
   private async createAchievement(
     prisma: Prisma.TransactionClient,
     goalId: number,
@@ -283,12 +373,27 @@ export class WithdrawService {
       | 'first_withdrawal',
     message: string,
   ) {
+    // Check if achievement of this type already exists (except for on_track type)
+    if (type !== 'on_track') {
+      const existingAchievement = await prisma.achievement.findFirst({
+        where: {
+          goalId,
+          type,
+        },
+      })
+
+      if (existingAchievement) {
+        return // Skip creation if achievement already exists
+      }
+    }
+
     await prisma.achievement.create({
       data: {
         goalId,
         type,
         message,
         isRead: false,
+        createdAt: new Date(),
       },
     })
   }

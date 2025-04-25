@@ -18,6 +18,7 @@ export class ContributionService {
       include: {
         goal: true,
       },
+      orderBy: { contributionDate: 'desc' },
     })
   }
 
@@ -42,6 +43,13 @@ export class ContributionService {
   }
 
   async create(createContributionDto: CreateContributionDto) {
+    // Validate contribution amount is positive
+    if (createContributionDto.amount <= 0) {
+      throw new BadRequestException(
+        'Contribution amount must be greater than 0',
+      )
+    }
+
     // Find the associated goal
     const goal = await this.prisma.goal.findUnique({
       where: { id: createContributionDto.goalId },
@@ -61,20 +69,49 @@ export class ContributionService {
 
     // Use transaction to ensure data consistency
     return this.prisma.$transaction(async (prisma) => {
-      // Create the contribution
+      // Create the contribution with validated date
       const contribution = await prisma.contribution.create({
         data: {
           amount: createContributionDto.amount,
-          contributionDate: createContributionDto.contributionDate,
-          notes: createContributionDto.notes,
+          contributionDate:
+            createContributionDto.contributionDate || new Date(),
+          notes: createContributionDto.notes || '',
           goal: {
             connect: { id: createContributionDto.goalId },
           },
         },
       })
 
-      // Update goal's current amount and last contribution date
-      await this.updateGoalAfterContribution(prisma, goal, contribution.amount)
+      // Calculate new current amount
+      const newCurrentAmount =
+        goal.currentAmount.toNumber() + contribution.amount.toNumber()
+
+      // Update goal data
+      const updateData: Prisma.GoalUpdateInput = {
+        currentAmount: newCurrentAmount,
+        lastContributionDate: contribution.contributionDate,
+        isAtRisk: false, // Reset risk status after contribution
+        needsRecalculation: true, // Flag for recalculation
+      }
+
+      // Check if goal is completed
+      if (newCurrentAmount >= goal.targetAmount.toNumber()) {
+        updateData.status = 'completed'
+
+        // Create completion achievement
+        await this.createAchievement(
+          prisma,
+          goal.id,
+          'goal_completed',
+          `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
+        )
+      }
+
+      // Update the goal with new data
+      await prisma.goal.update({
+        where: { id: goal.id },
+        data: updateData,
+      })
 
       // Check if this is the first contribution to create achievement
       const contributionCount = await prisma.contribution.count({
@@ -90,14 +127,58 @@ export class ContributionService {
         )
       }
 
-      // Check milestones
-      await this.checkMilestones(prisma, goal)
+      // Check progress milestones
+      await this.checkMilestones(prisma, {
+        ...goal,
+        currentAmount: new Prisma.Decimal(newCurrentAmount),
+      })
+
+      // Calculate weekly target and create new suggestion
+      const remainingAmount = Math.max(
+        0,
+        goal.targetAmount.toNumber() - newCurrentAmount,
+      )
+      const currentDate = new Date()
+      const deadline = new Date(goal.deadline)
+      const msPerWeek = 1000 * 60 * 60 * 24 * 7
+      const weeksLeft = Math.max(
+        1,
+        Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
+      )
+      const newWeeklyTarget = remainingAmount / weeksLeft
+
+      // Update the latest suggestion to set isActive to false
+      await prisma.suggestion.updateMany({
+        where: { goalId: goal.id, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create a new suggestion with updated target
+      await prisma.suggestion.create({
+        data: {
+          goalId: goal.id,
+          message: `Para alcanzar tu meta a tiempo, deberías ahorrar $${newWeeklyTarget.toFixed(2)} por semana.`,
+          suggestedAmount: newWeeklyTarget,
+          frequency: 'weekly',
+          isActive: true,
+        },
+      })
 
       return contribution
     })
   }
 
   async update(id: number, updateContributionDto: UpdateContributionDto) {
+    // Validate amount if provided
+    if (
+      updateContributionDto.amount !== undefined &&
+      updateContributionDto.amount <= 0
+    ) {
+      throw new BadRequestException(
+        'Contribution amount must be greater than 0',
+      )
+    }
+
     const contribution = await this.findOne(id)
     const oldAmount = contribution.amount
 
@@ -114,16 +195,62 @@ export class ContributionService {
           where: { id: contribution.goalId },
         })
 
-        if (goal) {
-          // Adjust the goal amount by the difference
-          const amountDifference =
-            updatedContribution.amount.toNumber() - oldAmount.toNumber()
-          await this.updateGoalAfterContributionUpdate(
-            prisma,
-            goal,
-            amountDifference,
+        if (!goal) {
+          throw new NotFoundException(
+            `Goal with ID ${contribution.goalId} not found`,
           )
         }
+
+        // Calculate the difference in amount
+        const amountDifference =
+          updatedContribution.amount.toNumber() - oldAmount.toNumber()
+
+        // Calculate new current amount
+        const newCurrentAmount =
+          goal.currentAmount.toNumber() + amountDifference
+
+        // Prepare update data
+        const updateData: Prisma.GoalUpdateInput = {
+          currentAmount: newCurrentAmount,
+          needsRecalculation: true,
+        }
+
+        // Check if goal status needs to change
+        if (
+          newCurrentAmount >= goal.targetAmount.toNumber() &&
+          goal.status === 'active'
+        ) {
+          updateData.status = 'completed'
+
+          // Create achievement for completion
+          await this.createAchievement(
+            prisma,
+            goal.id,
+            'goal_completed',
+            `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
+          )
+        } else if (
+          newCurrentAmount < goal.targetAmount.toNumber() &&
+          goal.status === 'completed'
+        ) {
+          // If goal was previously completed but now it's not
+          updateData.status = 'active'
+        }
+
+        // Update goal with new data
+        await prisma.goal.update({
+          where: { id: goal.id },
+          data: updateData,
+        })
+
+        // Check milestones based on new amount
+        await this.checkMilestones(prisma, {
+          ...goal,
+          currentAmount: new Prisma.Decimal(newCurrentAmount),
+        })
+
+        // Update suggestions
+        await this.updateSuggestions(prisma, goal, newCurrentAmount)
       }
 
       return updatedContribution
@@ -144,12 +271,62 @@ export class ContributionService {
         )
       }
 
-      // Update the goal's current amount by subtracting the contribution amount
-      await this.updateGoalAfterContributionRemoval(
+      // Calculate new current amount
+      const newCurrentAmount =
+        goal.currentAmount.toNumber() - contribution.amount.toNumber()
+
+      // Ensure current amount doesn't go below 0
+      if (newCurrentAmount < 0) {
+        throw new BadRequestException(
+          'Cannot remove contribution. Current amount cannot be negative.',
+        )
+      }
+
+      // Prepare update data
+      const updateData: Prisma.GoalUpdateInput = {
+        currentAmount: newCurrentAmount,
+        needsRecalculation: true,
+      }
+
+      // Check if goal status needs to change
+      if (
+        goal.status === 'completed' &&
+        newCurrentAmount < goal.targetAmount.toNumber()
+      ) {
+        updateData.status = 'active'
+      }
+
+      // Find the latest contribution date after removal
+      const latestContribution = await prisma.contribution.findFirst({
+        where: {
+          goalId: goal.id,
+          id: { not: contribution.id },
+        },
+        orderBy: { contributionDate: 'desc' },
+      })
+
+      if (latestContribution) {
+        updateData.lastContributionDate = latestContribution.contributionDate
+      } else {
+        updateData.lastContributionDate = null
+      }
+
+      // Update goal with new data
+      await prisma.goal.update({
+        where: { id: goal.id },
+        data: updateData,
+      })
+
+      // Create achievement for removal
+      await this.createAchievement(
         prisma,
-        goal,
-        contribution.amount,
+        goal.id,
+        'on_track',
+        `Has eliminado una contribución de $${contribution.amount.toString()}.`,
       )
+
+      // Update suggestions
+      await this.updateSuggestions(prisma, goal, newCurrentAmount)
 
       // Delete the contribution
       return prisma.contribution.delete({
@@ -158,127 +335,99 @@ export class ContributionService {
     })
   }
 
-  // Helper methods for goal updates
-  private async updateGoalAfterContribution(
+  // Helper methods
+  private async updateSuggestions(
     prisma: Prisma.TransactionClient,
     goal: Goal,
-    contributionAmount: Prisma.Decimal,
+    newCurrentAmount: number,
   ) {
-    // Calculate new current amount
-    const newCurrentAmount =
-      goal.currentAmount.toNumber() + contributionAmount.toNumber()
-
-    // Update goal data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      lastContributionDate: new Date(),
-      isAtRisk: false, // Reset risk status after contribution
-      needsRecalculation: true, // Flag for recalculation
-    }
-
-    // Check if goal is completed
+    // If goal is completed, no need for suggestions
     if (newCurrentAmount >= goal.targetAmount.toNumber()) {
-      updateData.status = 'completed'
-
-      await this.createAchievement(
-        prisma,
-        goal.id,
-        'goal_completed',
-        `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
-      )
+      await prisma.suggestion.updateMany({
+        where: { goalId: goal.id, isActive: true },
+        data: { isActive: false },
+      })
+      return
     }
 
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
+    // Calculate remaining amount and weeks
+    const remainingAmount = goal.targetAmount.toNumber() - newCurrentAmount
+    const currentDate = new Date()
+    const deadline = new Date(goal.deadline)
+    const msPerWeek = 1000 * 60 * 60 * 24 * 7
+    const weeksLeft = Math.max(
+      1,
+      Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
+    )
+    const newWeeklyTarget = remainingAmount / weeksLeft
+
+    // Update existing suggestions
+    await prisma.suggestion.updateMany({
+      where: { goalId: goal.id, isActive: true },
+      data: { isActive: false },
+    })
+
+    // Create new suggestion
+    await prisma.suggestion.create({
+      data: {
+        goalId: goal.id,
+        message: `Para alcanzar tu meta a tiempo, deberías ahorrar $${newWeeklyTarget.toFixed(2)} por semana.`,
+        suggestedAmount: newWeeklyTarget,
+        frequency: 'weekly',
+        isActive: true,
+      },
     })
   }
 
-  private async updateGoalAfterContributionUpdate(
-    prisma: Prisma.TransactionClient,
-    goal: Goal,
-    amountDifference: number,
-  ) {
-    // Calculate new current amount
-    const newCurrentAmount = goal.currentAmount.toNumber() + amountDifference
+  // Milestone tracking
+  private async checkMilestones(prisma: Prisma.TransactionClient, goal: Goal) {
+    const progressPercentage =
+      (goal.currentAmount.toNumber() / goal.targetAmount.toNumber()) * 100
 
-    // Update goal data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      needsRecalculation: true,
+    // Milestone checks
+    const milestones = [
+      {
+        threshold: 25,
+        type: 'milestone_25',
+        message: '¡Has alcanzado el 25% de tu meta "{goalName}"! Sigue así.',
+      },
+      {
+        threshold: 50,
+        type: 'milestone_50',
+        message:
+          '¡Vas por la mitad! Has alcanzado el 50% de tu meta "{goalName}".',
+      },
+      {
+        threshold: 75,
+        type: 'milestone_75',
+        message:
+          '¡Casi lo logras! Has alcanzado el 75% de tu meta "{goalName}".',
+      },
+    ]
+
+    for (const milestone of milestones) {
+      // Only check milestone if progress is at or above threshold
+      if (progressPercentage >= milestone.threshold) {
+        const existingAchievement = await prisma.achievement.findFirst({
+          where: {
+            goalId: goal.id,
+            type: milestone.type as
+              | 'milestone_25'
+              | 'milestone_50'
+              | 'milestone_75',
+          },
+        })
+
+        if (!existingAchievement) {
+          await this.createAchievement(
+            prisma,
+            goal.id,
+            milestone.type as 'milestone_25' | 'milestone_50' | 'milestone_75',
+            milestone.message.replace('{goalName}', goal.name),
+          )
+        }
+      }
     }
-
-    // Check if goal is completed after update
-    if (
-      newCurrentAmount >= goal.targetAmount.toNumber() &&
-      goal.status === 'active'
-    ) {
-      updateData.status = 'completed'
-
-      await this.createAchievement(
-        prisma,
-        goal.id,
-        'goal_completed',
-        `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
-      )
-    } else if (
-      newCurrentAmount < goal.targetAmount.toNumber() &&
-      goal.status === 'completed'
-    ) {
-      // If the goal was previously completed but now it's not
-      updateData.status = 'active'
-    }
-
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
-    })
-  }
-
-  private async updateGoalAfterContributionRemoval(
-    prisma: Prisma.TransactionClient,
-    goal: Goal,
-    contributionAmount: Prisma.Decimal,
-  ) {
-    // Calculate new current amount
-    let newCurrentAmount =
-      goal.currentAmount.toNumber() - contributionAmount.toNumber()
-
-    // Ensure current_amount doesn't go below 0
-    if (newCurrentAmount < 0) {
-      newCurrentAmount = 0
-    }
-
-    // Prepare update data
-    const updateData: Prisma.GoalUpdateInput = {
-      currentAmount: newCurrentAmount,
-      needsRecalculation: true,
-    }
-
-    // If goal was completed but now it's not
-    if (
-      goal.status === 'completed' &&
-      newCurrentAmount < goal.targetAmount.toNumber()
-    ) {
-      updateData.status = 'active'
-    }
-
-    // Find the latest contribution date
-    const latestContribution = await prisma.contribution.findFirst({
-      where: { id: goal.id },
-      orderBy: { contributionDate: 'desc' },
-    })
-
-    if (latestContribution) {
-      updateData.lastContributionDate = latestContribution.contributionDate
-    } else {
-      updateData.lastContributionDate = null
-    }
-
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: updateData,
-    })
   }
 
   // Weekly target recalculation
@@ -298,8 +447,10 @@ export class ContributionService {
 
   private async recalculateGoalWeeklyTarget(goal: Goal) {
     // Calculate remaining amount to reach target
-    const remainingAmount =
-      goal.targetAmount.toNumber() - goal.currentAmount.toNumber()
+    const remainingAmount = Math.max(
+      0,
+      goal.targetAmount.toNumber() - goal.currentAmount.toNumber(),
+    )
 
     if (remainingAmount <= 0) {
       // Goal already reached, no need for weekly target
@@ -379,69 +530,7 @@ export class ContributionService {
     })
   }
 
-  // Achievement tracking
-  private async checkMilestones(prisma: Prisma.TransactionClient, goal: Goal) {
-    const progressPercentage =
-      (goal.currentAmount.toNumber() / goal.targetAmount.toNumber()) * 100
-
-    // Check 25% milestone
-    if (progressPercentage >= 25 && progressPercentage < 50) {
-      const existingAchievement = await prisma.achievement.findFirst({
-        where: {
-          goalId: goal.id,
-          type: 'milestone_25',
-        },
-      })
-
-      if (!existingAchievement) {
-        await this.createAchievement(
-          prisma,
-          goal.id,
-          'milestone_25',
-          `¡Has alcanzado el 25% de tu meta "${goal.name}"! Sigue así.`,
-        )
-      }
-    }
-
-    // Check 50% milestone
-    if (progressPercentage >= 50 && progressPercentage < 75) {
-      const existingAchievement = await prisma.achievement.findFirst({
-        where: {
-          goalId: goal.id,
-          type: 'milestone_50',
-        },
-      })
-
-      if (!existingAchievement) {
-        await this.createAchievement(
-          prisma,
-          goal.id,
-          'milestone_50',
-          `¡Vas por la mitad! Has alcanzado el 50% de tu meta "${goal.name}".`,
-        )
-      }
-    }
-
-    // Check 75% milestone
-    if (progressPercentage >= 75 && progressPercentage < 100) {
-      const existingAchievement = await prisma.achievement.findFirst({
-        where: {
-          goalId: goal.id,
-          type: 'milestone_75',
-        },
-      })
-
-      if (!existingAchievement) {
-        await this.createAchievement(
-          prisma,
-          goal.id,
-          'milestone_75',
-          `¡Casi lo logras! Has alcanzado el 75% de tu meta "${goal.name}".`,
-        )
-      }
-    }
-  }
-
+  // Achievement creation
   private async createAchievement(
     prisma: Prisma.TransactionClient,
     goalId: number,
@@ -454,12 +543,27 @@ export class ContributionService {
       | 'first_contribution',
     message: string,
   ) {
+    // Check if achievement of this type already exists for this goal
+    if (type !== 'on_track') {
+      const existingAchievement = await prisma.achievement.findFirst({
+        where: {
+          goalId,
+          type,
+        },
+      })
+
+      if (existingAchievement) {
+        return // Skip creation if achievement already exists
+      }
+    }
+
     await prisma.achievement.create({
       data: {
         goalId,
         type,
         message,
         isRead: false,
+        createdAt: new Date(),
       },
     })
   }
