@@ -3,11 +3,15 @@ import { GoalReportsService } from './goal-reports.service'
 import { User } from 'src/common/decorators/user.decorator'
 import { Auth } from '../auth/decorators/auth.decorator'
 import { type User as IUser } from '@prisma/client'
+import { GoalReportCreatorService } from './goal-report-creator.service'
 
 @Controller('reports/goals')
 @Auth()
 export class GoalReportsController {
-  constructor(private readonly goalReportsService: GoalReportsService) {}
+  constructor(
+    private readonly goalReportsService: GoalReportsService,
+    private readonly reportCreator: GoalReportCreatorService,
+  ) {}
 
   @Get('status/category')
   async getGoalsByCategory(
@@ -15,11 +19,13 @@ export class GoalReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.goalReportsService.getGoalsByCategory(
+    const data = await this.goalReportsService.getGoalsByCategory(
       user.id,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
     )
+
+    return data
   }
 
   @Get('status/:status')
@@ -29,12 +35,16 @@ export class GoalReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.goalReportsService.getGoalsByStatus(
+    const data = await this.goalReportsService.getGoalsByStatus(
       user.id,
       status,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
     )
+
+    this.reportCreator.generateGoalsReport(data, 'Goals_Report.xlsx')
+
+    return data
   }
 
   @Get('at-risk')
