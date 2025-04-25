@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from 'src/global/prisma/prisma.service'
+import { GoalByStatus } from './interfaces/report'
 
 @Injectable()
 export class GoalReportsService {
@@ -13,7 +14,7 @@ export class GoalReportsService {
     status: 'completed' | 'expired' | 'in-progress',
     startDate?: Date,
     endDate?: Date,
-  ) {
+  ): Promise<GoalByStatus[]> {
     const now = new Date()
 
     // Base query filters (filtro por fecha si existe)
@@ -90,8 +91,6 @@ export class GoalReportsService {
         },
       },
     })
-
-    console.log(categories)
 
     // Process the data to calculate statistics per category
     return categories.map((category) => {
