@@ -83,6 +83,9 @@ export class AuthService {
         passwordHash: hashPassword(dto.password),
         firstName: dto.firstName,
         lastName: dto.lastName,
+        profilePicture: dto.profilePicture,
+        birthDate: dto.birthDate,
+        gender: dto.gender,
       },
     })
   }
