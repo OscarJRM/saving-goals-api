@@ -1,21 +1,13 @@
 import { Logger } from '@nestjs/common'
 import { Contribution, PrismaClient } from '@prisma/client'
+import { users } from './data/users'
 
 const prisma = new PrismaClient()
 
 async function main() {
   // Crear usuario
   const user = await prisma.user.create({
-    data: {
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      email: 'juan.perez@example.com',
-      passwordHash:
-        '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQRqQ8q1F5eYdLYy5z6dRA4CQZ7ZJdK', // "password123" hasheado
-      profilePicture: 'https://randomuser.me/api/portraits/men/1.jpg',
-      gender: 'Masculino',
-      birthDate: new Date('1990-05-15'),
-    },
+    data: users[0],
   })
 
   await prisma.category.createMany({

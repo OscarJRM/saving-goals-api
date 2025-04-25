@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common'
+import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common'
 import { OpenRouterService } from './ia.service'
 import { ChatReqDto } from './dto/chat-req.dto'
 import { User } from 'src/common/decorators/user.decorator'
@@ -13,5 +13,14 @@ export class IaController {
   @Post()
   async chat(@User() user: IUser, @Body() body: ChatReqDto) {
     return this.iaService.chat(user.id, body)
+  }
+
+  @Post(':goalId')
+  async chatWithGoal(
+    @User() user: IUser,
+    @Param('goalId', ParseIntPipe) goalId: number,
+    @Body() body: ChatReqDto,
+  ) {
+    return this.iaService.chatByGoal(goalId, user.id, body)
   }
 }

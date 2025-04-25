@@ -1,14 +1,11 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common'
+import { Injectable, NotFoundException, HttpStatus } from '@nestjs/common'
 import { CreateGoalDto } from './dto/create-goal.dto'
 import { UpdateGoalDto } from './dto/update-goal.dto'
 import { FilterGoalsDto } from './dto/filter-goal.dto'
 import { FinancialCalculatorService } from 'src/core/financial-calculator/financial-calculator.service'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from 'src/global/prisma/prisma.service'
+import { DisplayableException } from 'src/common/exceptions/displayable.exception'
 
 @Injectable()
 export class GoalsService {
@@ -24,7 +21,10 @@ export class GoalsService {
     // Verificar que la fecha límite sea en el futuro
     const currentDate = new Date()
     if (new Date(createGoalDto.deadline) <= currentDate) {
-      throw new BadRequestException('La fecha límite debe ser en el futuro')
+      throw new DisplayableException(
+        'La fecha límite debe ser en el futuro',
+        HttpStatus.BAD_REQUEST,
+      )
     }
 
     // Verificar que la categoría existe
@@ -68,14 +68,9 @@ export class GoalsService {
       },
     })
 
-    const progressNumber = this.financialCalculator.calculateProgress(
-      parseFloat(goal.currentAmount.toString()),
-      parseFloat(goal.targetAmount.toString()),
-    )
-
     return {
       ...goal,
-      progress: progressNumber,
+      progress: 0,
     }
   }
 
@@ -174,7 +169,10 @@ export class GoalsService {
       updateGoalDto.deadline &&
       new Date(updateGoalDto.deadline) <= new Date()
     ) {
-      throw new BadRequestException('La fecha límite debe ser en el futuro')
+      throw new DisplayableException(
+        'La fecha límite debe ser en el futuro',
+        HttpStatus.BAD_REQUEST,
+      )
     }
 
     // Si se actualiza la categoría, verificar que existe

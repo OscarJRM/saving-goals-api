@@ -46,4 +46,44 @@ export class OpenRouterService {
 
     return response.data.choices[0].message.content
   }
+
+  async chatByGoal(
+    goalId: number,
+    userId: number,
+    { prompt, context, model }: ChatReqDto,
+  ) {
+    const goals = await this.goalsService.findOne(userId, goalId)
+
+    const preContext = [
+      {
+        role: MessageRole.USER,
+        content:
+          'Eres un experto en finanzas personales y ahorro. Tienes conocimientos sobre ahorro, presupuesto, inversión y finanzas personales. Eres capaz de responder preguntas sobre estos temas y dar recomendaciones personalizadas a los usuarios. Eres capaz de entender el contexto de las preguntas de los usuarios y dar respuestas relevantes, concisas y útiles. Eres capaz de aprender de las interacciones con los usuarios y mejorar tus respuestas con el tiempo.',
+      },
+      {
+        role: MessageRole.USER,
+        content:
+          'A continuación se presenta las meta de ahorro y presupuesto del usuario. Usa esta información para ayudar al usuario a lograr sus meta de ahorro y presupuesto.',
+      },
+    ]
+
+    const goalsContext = [
+      {
+        role: MessageRole.USER,
+        content: ` Meta de ahorro: ${goals.name}. Fecha de inicio: ${goals.createdAt.toISOString()}. Fecha de finalización: ${goals.deadline.toISOString()}. Monto total: ${goals.targetAmount.toString()}. Monto ahorrado: ${goals.currentAmount.toString()}. Inicialmente son cuotas de ${goals.initialWeeklyTarget?.toString()} cada una. Actualmente son cuotas de ${goals.currentWeeklyTarget?.toString()} cada una.`,
+      },
+    ]
+    context = [...preContext, ...goalsContext, ...context]
+
+    const messages = [...context, { role: 'user', content: prompt }]
+
+    const response = await lastValueFrom(
+      this.httpService.post<OpenRouterResponse>('', {
+        model,
+        messages,
+      }),
+    )
+
+    return response.data.choices[0].message.content
+  }
 }
