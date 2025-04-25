@@ -54,21 +54,29 @@ export class ContributionService {
         'Contribution amount must be greater than 0',
       )
     }
-
     // Find the associated goal
     const goal = await this.prisma.goal.findUnique({
       where: { id: createContributionDto.goalId },
     })
-
     if (!goal) {
       throw new NotFoundException(
         `Goal with ID ${createContributionDto.goalId} not found`,
       )
     }
-
     if (goal.status !== 'active') {
       throw new BadRequestException(
         `Cannot add contributions to a ${goal.status} goal`,
+      )
+    }
+
+    // Calculate new current amount after contribution
+    const newCurrentAmount =
+      goal.currentAmount.toNumber() + createContributionDto.amount
+
+    // Verificar que la contribución no exceda significativamente la meta
+    if (newCurrentAmount > goal.targetAmount.toNumber()) {
+      throw new BadRequestException(
+        `La contribución de ${createContributionDto.amount} excede el objetivo de la meta. El monto máximo que puedes aportar es ${goal.targetAmount.toNumber() - goal.currentAmount.toNumber()}`,
       )
     }
 
@@ -86,11 +94,6 @@ export class ContributionService {
           },
         },
       })
-
-      // Calculate new current amount
-      const newCurrentAmount =
-        goal.currentAmount.toNumber() + contribution.amount.toNumber()
-
       // Update goal data
       const updateData: Prisma.GoalUpdateInput = {
         currentAmount: newCurrentAmount,
@@ -98,11 +101,9 @@ export class ContributionService {
         isAtRisk: false, // Reset risk status after contribution
         needsRecalculation: true, // Flag for recalculation
       }
-
       // Check if goal is completed
       if (newCurrentAmount >= goal.targetAmount.toNumber()) {
         updateData.status = 'completed'
-
         // Create completion achievement
         await this.createAchievement(
           prisma,
@@ -111,18 +112,15 @@ export class ContributionService {
           `¡Felicitaciones! Has alcanzado tu meta "${goal.name}" con éxito.`,
         )
       }
-
       // Update the goal with new data
       await prisma.goal.update({
         where: { id: goal.id },
         data: updateData,
       })
-
       // Check if this is the first contribution to create achievement
       const contributionCount = await prisma.contribution.count({
         where: { goalId: goal.id },
       })
-
       if (contributionCount === 1) {
         await this.createAchievement(
           prisma,
@@ -131,13 +129,11 @@ export class ContributionService {
           `¡Felicidades! Has realizado tu primera contribución hacia la meta "${goal.name}".`,
         )
       }
-
       // Check progress milestones
       await this.checkMilestones(prisma, {
         ...goal,
         currentAmount: new Prisma.Decimal(newCurrentAmount),
       })
-
       // Calculate weekly target and create new suggestion
       const remainingAmount = Math.max(
         0,
@@ -151,13 +147,11 @@ export class ContributionService {
         Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
       )
       const newWeeklyTarget = remainingAmount / weeksLeft
-
       // Update the latest suggestion to set isActive to false
       await prisma.suggestion.updateMany({
         where: { goalId: goal.id, isActive: true },
         data: { isActive: false },
       })
-
       // Create a new suggestion with updated target
       await prisma.suggestion.create({
         data: {
@@ -168,7 +162,6 @@ export class ContributionService {
           isActive: true,
         },
       })
-
       return contribution
     })
   }
