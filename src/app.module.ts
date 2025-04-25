@@ -17,6 +17,8 @@ import { ScheduledTasksService } from './global/cronjob/scheduled-task/scheduled
 import { WithdrawModule } from './core/withdraw/withdraw.module'
 import { ExcelModule } from './services/excel/excel.module'
 import { ReportsModule } from './core/reports/reports.module'
+import { HttpModule } from '@nestjs/axios'
+import { IaModule } from './core/ia/ia.module'
 
 @Module({
   imports: [
@@ -32,6 +34,18 @@ import { ReportsModule } from './core/reports/reports.module'
     WithdrawModule,
     ExcelModule,
     ReportsModule,
+    IaModule,
+    HttpModule.registerAsync({
+      global: true,
+      imports: [CustomConfigModule],
+      inject: [CustomConfigService],
+      useFactory: (configService: CustomConfigService) => ({
+        baseURL: configService.env.IA_API_URL,
+        headers: {
+          Authorization: `Bearer ${configService.env.IA_API_KEY}`,
+        },
+      }),
+    }),
   ],
   controllers: [AppController],
   providers: [

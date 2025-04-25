@@ -6,5 +6,6 @@ import { FinancialCalculatorService } from 'src/core/financial-calculator/financ
 @Module({
   controllers: [GoalsController],
   providers: [GoalsService, FinancialCalculatorService],
+  exports: [GoalsService],
 })
 export class GoalsModule {}
