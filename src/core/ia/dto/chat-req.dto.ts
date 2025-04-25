@@ -21,5 +21,5 @@ export class ChatReqDto {
 
   @IsString()
   @IsOptional()
-  model = 'microsoft/mai-ds-r1:free'
+  model = 'google/learnlm-1.5-pro-experimental:free'
 }

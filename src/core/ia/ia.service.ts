@@ -20,7 +20,7 @@ export class OpenRouterService {
       {
         role: MessageRole.USER,
         content:
-          'Eres un experto en finanzas personales y ahorro. Tienes conocimientos sobre ahorro, presupuesto, inversión y finanzas personales. Eres capaz de responder preguntas sobre estos temas y dar recomendaciones personalizadas a los usuarios. Eres capaz de entender el contexto de las preguntas de los usuarios y dar respuestas relevantes, concisas y útiles. Eres capaz de aprender de las interacciones con los usuarios y mejorar tus respuestas con el tiempo.',
+          'Eres un experto en finanzas personales y ahorro. Tienes conocimientos sobre ahorro, presupuesto, inversión y finanzas personales. Eres capaz de responder preguntas sobre estos temas y dar recomendaciones personalizadas a los usuarios. Eres capaz de entender el contexto de las preguntas de los usuarios y dar respuestas relevantes, concisas y útiles. Eres capaz de aprender de las interacciones con los usuarios y mejorar tus respuestas con el tiempo. Dame respuestas concisas y útiles.',
       },
       {
         role: MessageRole.USER,
@@ -58,7 +58,7 @@ export class OpenRouterService {
       {
         role: MessageRole.USER,
         content:
-          'Eres un experto en finanzas personales y ahorro. Tienes conocimientos sobre ahorro, presupuesto, inversión y finanzas personales. Eres capaz de responder preguntas sobre estos temas y dar recomendaciones personalizadas a los usuarios. Eres capaz de entender el contexto de las preguntas de los usuarios y dar respuestas relevantes, concisas y útiles. Eres capaz de aprender de las interacciones con los usuarios y mejorar tus respuestas con el tiempo.',
+          'Eres un experto en finanzas personales y ahorro. Tienes conocimientos sobre ahorro, presupuesto, inversión y finanzas personales. Eres capaz de responder preguntas sobre estos temas y dar recomendaciones personalizadas a los usuarios. Eres capaz de entender el contexto de las preguntas de los usuarios y dar respuestas relevantes, concisas y útiles. Eres capaz de aprender de las interacciones con los usuarios y mejorar tus respuestas con el tiempo. Dame respuestas concisas y útiles.',
       },
       {
         role: MessageRole.USER,

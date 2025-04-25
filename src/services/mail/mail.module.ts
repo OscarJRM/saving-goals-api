@@ -21,7 +21,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
           },
         },
         defaults: {
-          from: '"Nombre de tu App" <tuemail@gmail.com>', // Remitente por defecto
+          from: '"Saving Goals API" <tuemail@gmail.com>', // Remitente por defecto
         },
         template: {
           dir: join(process.cwd(), 'src', 'services', 'mail', 'templates'),
