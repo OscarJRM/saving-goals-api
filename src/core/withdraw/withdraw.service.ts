@@ -52,31 +52,26 @@ export class WithdrawService {
     if (createWithdrawalDto.amount <= 0) {
       throw new BadRequestException('Withdrawal amount must be greater than 0')
     }
-
     // Find the associated goal
     const goal = await this.prisma.goal.findUnique({
       where: { id: createWithdrawalDto.goalId },
     })
-
     if (!goal) {
       throw new NotFoundException(
         `Goal with ID ${createWithdrawalDto.goalId} not found`,
       )
     }
-
     if (goal.status !== 'active' && goal.status !== 'completed') {
       throw new BadRequestException(
         `Cannot withdraw from a ${goal.status} goal`,
       )
     }
-
     // Validate withdrawal amount
     if (createWithdrawalDto.amount > goal.currentAmount.toNumber()) {
       throw new BadRequestException(
         `Withdrawal amount exceeds current goal balance of ${goal.currentAmount.toString()}`,
       )
     }
-
     // Use transaction to ensure data consistency
     return this.prisma.$transaction(async (prisma) => {
       // Create the withdrawal with validated date
@@ -90,17 +85,14 @@ export class WithdrawService {
           },
         },
       })
-
       // Calculate new current amount after withdrawal
       const newCurrentAmount =
         goal.currentAmount.toNumber() - withdrawal.amount.toNumber()
-
       // Prepare goal update data
       const updateData: Prisma.GoalUpdateInput = {
         currentAmount: newCurrentAmount,
         needsRecalculation: true, // Flag for recalculation
       }
-
       // Update goal status if needed
       if (
         goal.status === 'completed' &&
@@ -108,18 +100,15 @@ export class WithdrawService {
       ) {
         updateData.status = 'active' // Goal is no longer completed
       }
-
       // Update the goal
       await prisma.goal.update({
         where: { id: goal.id },
         data: updateData,
       })
-
       // Check if this is the first withdrawal to create achievement
       const withdrawalCount = await prisma.withdrawal.count({
         where: { goalId: goal.id },
       })
-
       if (withdrawalCount === 1) {
         await this.createAchievement(
           prisma,
@@ -128,7 +117,6 @@ export class WithdrawService {
           `Has realizado tu primer retiro de la meta "${goal.name}".`,
         )
       }
-
       // Calculate new weekly target after withdrawal
       const remainingAmount = goal.targetAmount.toNumber() - newCurrentAmount
       const currentDate = new Date()
@@ -139,13 +127,11 @@ export class WithdrawService {
         Math.ceil((deadline.getTime() - currentDate.getTime()) / msPerWeek),
       )
       const newWeeklyTarget = remainingAmount / weeksLeft
-
       // Update suggestions
       await prisma.suggestion.updateMany({
         where: { goalId: goal.id, isActive: true },
         data: { isActive: false },
       })
-
       // Create new suggestion with updated target
       await prisma.suggestion.create({
         data: {
@@ -156,7 +142,6 @@ export class WithdrawService {
           isActive: true,
         },
       })
-
       return withdrawal
     })
   }
