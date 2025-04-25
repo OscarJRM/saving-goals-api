@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Recordatorio Semanal de Metas de Ahorro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #fff;
+            border-left: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+        }
+        .goal-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .goal-name {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .progress-bar {
+            background-color: #e9ecef;
+            border-radius: 5px;
+            height: 10px;
+            margin: 5px 0;
+        }
+        .progress {
+            background-color: #28a745;
+            height: 100%;
+            border-radius: 5px;
+        }
+        .goal-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        .footer {
+            padding: 20px;
+            background-color: #f8f9fa;
+            text-align: center;
+            border-radius: 0 0 5px 5px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0 10px;
+        }
+        .at-risk {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Recordatorio Semanal de Metas</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hola {{name}},</p>
+        
+        <p>Aquí tienes un resumen del progreso de tus metas esta semana:</p>
+        
+        <h2>Tus Metas de Ahorro</h2>
+        
+        {{#each goals}}
+        <div class="goal-item">
+            <div class="goal-name">{{this.name}}</div>
+            
+            <div class="progress-bar">
+                <div class="progress" style="width: {{this.progressPercentage}}%"></div>
+            </div>
+            
+            <div class="goal-details">
+                <span>${{this.currentAmount}} de ${{this.targetAmount}}</span>
+                <span>{{this.progressPercentage}}% completado</span>
+            </div>
+            
+            {{#if this.isAtRisk}}
+            <p class="at-risk">⚠️ Esta meta necesita atención</p>
+            {{/if}}
+            
+            {{#if this.weeklyTarget}}
+            <p>Meta semanal sugerida: ${{this.weeklyTarget}}</p>
+            {{/if}}
+        </div>
+        {{/each}}
+        
+        <center>
+            <a href="{{appUrl}}/goals" class="btn">Ver todas mis metas</a>
+        </center>
+        
+        <p>¡Sigue así! Cada pequeño aporte te acerca a tus objetivos financieros.</p>
+    </div>
+    
+    <div class="footer">
+        <p>Este es un recordatorio automático. Puedes ajustar la frecuencia en la configuración de tu cuenta.</p>
+        <p>© {{year}} TuAppDeAhorros. Todos los derechos reservados.</p>
+    </div>
+</body>
+</html>

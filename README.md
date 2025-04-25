@@ -1,98 +1,123 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Savings Goals API 🏦🎯
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Esta API permite a los usuarios establecer metas de ahorro, realizar contribuciones y retiros, y recibir sugerencias personalizadas para optimizar su ahorro. Además, cuenta con un asistente virtual que ofrece recomendaciones financieras basadas en el comportamiento del usuario.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Características Clave ✨
 
-## Description
+- 🔐 Autenticación JWT con Passport
+- 📈 CRUD completo para:
+  - Metas de ahorro
+  - Contribuciones
+  - Retiros
+  - Categorías
+  - Sugerencias personalizadas
+- 🤖 Integración con OpenRouter IA para:
+  - Recomendaciones financieras
+  - Análisis de hábitos de ahorro
+  - Asistente virtual
+- 📧 Sistema de notificaciones:
+  - Recordatorios programados (Cron Jobs)
+  - Alertas de progreso
+  - Plantillas personalizadas (HBS)
+- 🛠️ Herramientas de desarrollo:
+  - Pre-commits con Husky
+  - Formateo automático (Prettier)
+  - Linting (ESLint)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tecnologías 🛠️
 
-## Project setup
+| Categoría         | Tecnologías                   |
+| ----------------- | ----------------------------- |
+| Backend           | NestJS, Node.js 22.14, Bun    |
+| Base de Datos     | PostgreSQL 17, Prisma ORM     |
+| Autenticación     | Passport-JWT                  |
+| Documentación     | Swagger UI                    |
+| DevOps            | Docker, Git                   |
+| Calidad de Código | Husky, Prettier, ESLint       |
+| Testing           | Postman                       |
+| Email             | Nodemailer con plantillas HBS |
 
-```bash
-$ npm install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Estructura del Proyecto 📂
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+src/
+├── auth/ # Autenticación JWT
+├── goals/ # Lógica de metas de ahorro
+├── contributions/ # Manejo de contribuciones
+├── withdrawals/ # Gestión de retiros
+├── categories/ # CRUD categorías
+├── ai-assistant/ # Integración OpenRouter IA
+├── mail/ # Sistema de notificaciones
+├── cron/ # Tareas programadas
+├── common/ # Utilidades compartidas
+└── prisma/ # Esquema y migraciones DB
 ```
 
-## Deployment
+## Requisitos 📋
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- Node.js 22.14+
+- Bun (opcional para desarrollo)
+- PostgreSQL 17
+- Docker (para desarrollo con contenedores)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Configuración ⚙️
+
+1. Clonar repositorio:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+git clone [repo-url]
+cd saving-goals-api
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+2. Instalar dependencias:
 
-## Resources
+```bash
+npm install
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+3. Configurar variables de entorno (crear archivo .env basado en el ejemplo):
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+PORT=3000
+DB_PORT=5460
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=saving-goals-db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5460/saving-goals-db
+JWT_SECRET=top_secret
+GMAIL_USER=tu_email@gmail.com
+GMAIL_PASSWORD=tu_password_app
+IA_API_KEY=tu_key_openrouter
+IA_API_URL=https://openrouter.ai/api/v1/chat/completions
+```
 
-## Support
+4. Iniciar base de datos con Docker:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+docker compose up -d
+```
 
-## Stay in touch
+5. Ejecutar migraciones y seed inicial:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+bun prisma generate
+bun prisma db:seed
+```
 
-## License
+6. Iniciar servidor en desarrollo:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+bun dev
+```
+
+## Diagrama de Arquitectura 🏗️
+
+![Diagrama de Arquitectura](public/arquitectura.png)
+
+## Flujo Principal 🔄
+
+![Flujo Principal](public/flujo-principal.png)
+
+## Flujo de Autenticación 🔑
+
+![Flujo de Autenticación](public/flujo-auth.png)

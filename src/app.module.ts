@@ -1,10 +1,59 @@
 import { Module } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { GoalsModule } from './core/goals/goals.module'
+import { FinancialCalculatorService } from './core/financial-calculator/financial-calculator.service'
+import { PrismaModule } from './global/prisma/prisma.module'
+import { CustomConfigModule } from './global/config/config.module'
+import { CustomConfigService } from './global/config/config.service'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+import { AuthModule } from './core/auth/auth.module'
+import { ContributionModule } from './core/contribution/contribution.module'
+import { ScheduleModule } from '@nestjs/schedule'
+import { SuggestionModule } from './core/suggestion/suggestion.module'
+import { MailModule } from './services/mail/mail.module'
+import { PdfModule } from './services/pdf/pdf.module'
+import { ScheduledTasksService } from './global/cronjob/scheduled-task/scheduled-task.service'
+import { WithdrawModule } from './core/withdraw/withdraw.module'
+import { ExcelModule } from './services/excel/excel.module'
+import { ReportsModule } from './core/reports/reports.module'
+import { HttpModule } from '@nestjs/axios'
+import { IaModule } from './core/ia/ia.module'
 
 @Module({
-  imports: [],
+  imports: [
+    ScheduleModule.forRoot(),
+    GoalsModule,
+    PrismaModule,
+    CustomConfigModule,
+    AuthModule,
+    ContributionModule,
+    SuggestionModule,
+    MailModule,
+    PdfModule,
+    WithdrawModule,
+    ExcelModule,
+    ReportsModule,
+    IaModule,
+    HttpModule.registerAsync({
+      global: true,
+      imports: [CustomConfigModule],
+      inject: [CustomConfigService],
+      useFactory: (configService: CustomConfigService) => ({
+        baseURL: configService.env.IA_API_URL,
+        headers: {
+          Authorization: `Bearer ${configService.env.IA_API_KEY}`,
+        },
+      }),
+    }),
+  ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    FinancialCalculatorService,
+    CustomConfigService,
+    ResponseInterceptor,
+    ScheduledTasksService,
+  ],
 })
 export class AppModule {}
