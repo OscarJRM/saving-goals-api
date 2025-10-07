@@ -21,5 +21,5 @@ export class ChatReqDto {
 
   @IsString()
   @IsOptional()
-  model = 'deepseek/deepseek-chat-v3-0324:free'
+  model = 'google/gemini-2.0-flash-exp:free'
 }
