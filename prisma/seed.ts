@@ -5,11 +5,22 @@ import { users } from './data/users'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Crear usuario
-  const user = await prisma.user.create({
-    data: users[0],
+  // ─────────────────────────────────────────────
+  // 🧩 1. Crear usuario si no existe
+  // ─────────────────────────────────────────────
+  const existingUser = await prisma.user.findUnique({
+    where: { email: users[0].email },
   })
 
+  const user = existingUser
+    ? existingUser
+    : await prisma.user.create({
+        data: users[0],
+      })
+
+  // ─────────────────────────────────────────────
+  // 🧩 2. Crear categorías si no existen
+  // ─────────────────────────────────────────────
   await prisma.category.createMany({
     data: [
       {
@@ -38,9 +49,10 @@ async function main() {
         icon: 'home',
       },
     ],
+    skipDuplicates: true, // <-- evita duplicados si ya existen
   })
 
-  // Obtener categorías para usarlas en las metas
+  // Obtener categorías
   const travelCategory = await prisma.category.findUnique({
     where: { name: 'Viajes' },
   })
@@ -51,181 +63,216 @@ async function main() {
     where: { name: 'Emergencias' },
   })
 
-  // Crear metas para el usuario
+  // ─────────────────────────────────────────────
+  // 🧩 3. Crear metas solo si no existen
+  // ─────────────────────────────────────────────
+  async function createGoalIfNotExists(data: any) {
+    const existingGoal = await prisma.goal.findFirst({
+      where: { name: data.name, userId: user.id },
+    })
+    if (!existingGoal) {
+      return prisma.goal.create({ data })
+    }
+    return existingGoal
+  }
+
   const goals = await Promise.all([
-    prisma.goal.create({
-      data: {
-        userId: user.id,
-        categoryId: travelCategory!.id,
-        name: 'Viaje a Europa',
-        targetAmount: 5000.0,
-        deadline: new Date('2024-06-01'),
-        initialWeeklyTarget: 200.0,
-        currentWeeklyTarget: 200.0,
-        currentAmount: 1200.0,
-        isAtRisk: false,
-      },
+    createGoalIfNotExists({
+      userId: user.id,
+      categoryId: travelCategory!.id,
+      name: 'Viaje a Europa',
+      targetAmount: 5000.0,
+      deadline: new Date('2024-06-01'),
+      initialWeeklyTarget: 200.0,
+      currentWeeklyTarget: 200.0,
+      currentAmount: 1200.0,
+      isAtRisk: false,
     }),
-    prisma.goal.create({
-      data: {
-        userId: user.id,
-        categoryId: educationCategory!.id,
-        name: 'Maestría en Administración',
-        targetAmount: 8000.0,
-        deadline: new Date('2024-09-15'),
-        initialWeeklyTarget: 250.0,
-        currentWeeklyTarget: 250.0,
-        currentAmount: 3000.0,
-        isAtRisk: true,
-      },
+    createGoalIfNotExists({
+      userId: user.id,
+      categoryId: educationCategory!.id,
+      name: 'Maestría en Administración',
+      targetAmount: 8000.0,
+      deadline: new Date('2024-09-15'),
+      initialWeeklyTarget: 250.0,
+      currentWeeklyTarget: 250.0,
+      currentAmount: 3000.0,
+      isAtRisk: true,
     }),
-    prisma.goal.create({
-      data: {
-        userId: user.id,
-        categoryId: emergencyCategory!.id,
-        name: 'Fondo de emergencia',
-        targetAmount: 10000.0,
-        deadline: new Date('2025-12-31'),
-        initialWeeklyTarget: 100.0,
-        currentWeeklyTarget: 100.0,
-        currentAmount: 2500.0,
-        isAtRisk: false,
-      },
+    createGoalIfNotExists({
+      userId: user.id,
+      categoryId: emergencyCategory!.id,
+      name: 'Fondo de emergencia',
+      targetAmount: 10000.0,
+      deadline: new Date('2025-12-31'),
+      initialWeeklyTarget: 100.0,
+      currentWeeklyTarget: 100.0,
+      currentAmount: 2500.0,
+      isAtRisk: false,
     }),
   ])
 
-  // Función para generar fechas aleatorias en un rango
+  // ─────────────────────────────────────────────
+  // 🧩 4. Crear contribuciones, retiros, recordatorios, etc. solo si no existen
+  // ─────────────────────────────────────────────
+
+  // Generador de fechas aleatorias
   function randomDate(start: Date, end: Date) {
     return new Date(
       start.getTime() + Math.random() * (end.getTime() - start.getTime()),
     )
   }
 
-  // Crear contribuciones para cada meta
-  const contributions: Contribution[] = []
+  // Evitar repetir si ya existen contribuciones
+  const existingContributions = await prisma.contribution.findMany({
+    where: { goalId: goals[0].id },
+  })
+  if (existingContributions.length === 0) {
+    const contributions: Contribution[] = []
 
-  // Contribuciones para el viaje a Europa (meta 1)
-  for (let i = 0; i < 8; i++) {
-    contributions.push(
-      await prisma.contribution.create({
-        data: {
-          goalId: goals[0].id,
-          amount: Math.random() > 0.3 ? 200.0 : 150.0 + Math.random() * 100, // 70% chance de 200, 30% de 150-250
-          contributionDate: randomDate(new Date('2023-01-01'), new Date()),
-          notes:
-            i % 3 === 0
-              ? 'Depósito quincenal'
-              : i % 3 === 1
+    // Contribuciones para el viaje a Europa
+    for (let i = 0; i < 8; i++) {
+      contributions.push(
+        await prisma.contribution.create({
+          data: {
+            goalId: goals[0].id,
+            amount:
+              Math.random() > 0.3 ? 200.0 : 150.0 + Math.random() * 100,
+            contributionDate: randomDate(new Date('2023-01-01'), new Date()),
+            notes:
+              i % 3 === 0
+                ? 'Depósito quincenal'
+                : i % 3 === 1
                 ? 'Bono trabajo'
                 : 'Ahorro extra',
-        },
-      }),
-    )
+          },
+        }),
+      )
+    }
+
+    // Maestría
+    for (let i = 0; i < 7; i++) {
+      contributions.push(
+        await prisma.contribution.create({
+          data: {
+            goalId: goals[1].id,
+            amount:
+              Math.random() > 0.4 ? 250.0 : 200.0 + Math.random() * 100,
+            contributionDate: randomDate(new Date('2023-02-15'), new Date()),
+            notes: i % 2 === 0 ? 'Pago mensual' : 'Ahorro variable',
+          },
+        }),
+      )
+    }
+
+    // Fondo de emergencia
+    for (let i = 0; i < 5; i++) {
+      contributions.push(
+        await prisma.contribution.create({
+          data: {
+            goalId: goals[2].id,
+            amount:
+              Math.random() > 0.5 ? 100.0 : 50.0 + Math.random() * 100,
+            contributionDate: randomDate(new Date('2023-03-01'), new Date()),
+            notes:
+              i % 4 === 0 ? 'Depósito automático' : 'Transferencia manual',
+          },
+        }),
+      )
+    }
   }
 
-  // Contribuciones para la maestría (meta 2)
-  for (let i = 0; i < 7; i++) {
-    contributions.push(
-      await prisma.contribution.create({
+  // ─────────────────────────────────────────────
+  // 🧩 5. Crear datos secundarios (retiros, recordatorios, etc.) si no existen
+  // ─────────────────────────────────────────────
+  const withdrawalsCount = await prisma.withdrawal.count()
+  if (withdrawalsCount === 0) {
+    await Promise.all([
+      prisma.withdrawal.create({
         data: {
-          goalId: goals[1].id,
-          amount: Math.random() > 0.4 ? 250.0 : 200.0 + Math.random() * 100, // 60% chance de 250, 40% de 200-300
-          contributionDate: randomDate(new Date('2023-02-15'), new Date()),
-          notes: i % 2 === 0 ? 'Pago mensual' : 'Ahorro variable',
+          goalId: goals[0].id,
+          amount: 300.0,
+          withdrawalDate: new Date('2023-05-10'),
+          notes: 'Compra de boletos de avión',
         },
       }),
-    )
-  }
-
-  // Contribuciones para el fondo de emergencia (meta 3)
-  for (let i = 0; i < 5; i++) {
-    contributions.push(
-      await prisma.contribution.create({
+      prisma.withdrawal.create({
         data: {
           goalId: goals[2].id,
-          amount: Math.random() > 0.5 ? 100.0 : 50.0 + Math.random() * 100, // 50% chance de 100, 50% de 50-150
-          contributionDate: randomDate(new Date('2023-03-01'), new Date()),
-          notes: i % 4 === 0 ? 'Depósito automático' : 'Transferencia manual',
+          amount: 500.0,
+          withdrawalDate: new Date('2023-04-15'),
+          notes: 'Reparación de refrigerador',
         },
       }),
-    )
+    ])
   }
 
-  await Promise.all([
-    prisma.withdrawal.create({
-      data: {
-        goalId: goals[0].id,
-        amount: 300.0,
-        withdrawalDate: new Date('2023-05-10'),
-        notes: 'Compra de boletos de avión',
-      },
-    }),
-    prisma.withdrawal.create({
-      data: {
-        goalId: goals[2].id,
-        amount: 500.0,
-        withdrawalDate: new Date('2023-04-15'),
-        notes: 'Reparación de refrigerador',
-      },
-    }),
-  ])
+  const remindersCount = await prisma.reminder.count()
+  if (remindersCount === 0) {
+    await Promise.all([
+      prisma.reminder.create({
+        data: {
+          goalId: goals[0].id,
+          scheduledDate: new Date('2023-06-01'),
+          reminderType: 'email',
+        },
+      }),
+      prisma.reminder.create({
+        data: {
+          goalId: goals[1].id,
+          scheduledDate: new Date('2023-05-15'),
+          reminderType: 'push',
+          wasSent: true,
+        },
+      }),
+    ])
+  }
 
-  await Promise.all([
-    prisma.reminder.create({
-      data: {
-        goalId: goals[0].id,
-        scheduledDate: new Date('2023-06-01'),
-        reminderType: 'email',
-      },
-    }),
-    prisma.reminder.create({
-      data: {
-        goalId: goals[1].id,
-        scheduledDate: new Date('2023-05-15'),
-        reminderType: 'push',
-        wasSent: true,
-      },
-    }),
-  ])
+  const suggestionsCount = await prisma.suggestion.count()
+  if (suggestionsCount === 0) {
+    await Promise.all([
+      prisma.suggestion.create({
+        data: {
+          goalId: goals[0].id,
+          message:
+            'Considera aumentar tu aportación semanal a $250 para alcanzar tu meta a tiempo',
+          suggestedAmount: 250.0,
+          frequency: 'semanal',
+        },
+      }),
+      prisma.suggestion.create({
+        data: {
+          goalId: goals[1].id,
+          message:
+            'Tu meta está en riesgo, te sugerimos ajustar tu frecuencia a quincenal',
+          frequency: 'quincenal',
+        },
+      }),
+    ])
+  }
 
-  await Promise.all([
-    prisma.suggestion.create({
-      data: {
-        goalId: goals[0].id,
-        message:
-          'Considera aumentar tu aportación semanal a $250 para alcanzar tu meta a tiempo',
-        suggestedAmount: 250.0,
-        frequency: 'semanal',
-      },
-    }),
-    prisma.suggestion.create({
-      data: {
-        goalId: goals[1].id,
-        message:
-          'Tu meta está en riesgo, te sugerimos ajustar tu frecuencia a quincenal',
-        frequency: 'quincenal',
-      },
-    }),
-  ])
-
-  await Promise.all([
-    prisma.achievement.create({
-      data: {
-        goalId: goals[0].id,
-        type: 'milestone',
-        message: '¡Felicidades! Has alcanzado el 20% de tu meta de viaje',
-      },
-    }),
-    prisma.achievement.create({
-      data: {
-        goalId: goals[2].id,
-        type: 'consistency',
-        message:
-          'Has realizado aportaciones consistentes por 3 meses consecutivos',
-      },
-    }),
-  ])
+  const achievementsCount = await prisma.achievement.count()
+  if (achievementsCount === 0) {
+    await Promise.all([
+      prisma.achievement.create({
+        data: {
+          goalId: goals[0].id,
+          type: 'milestone',
+          message: '¡Felicidades! Has alcanzado el 20% de tu meta de viaje',
+        },
+      }),
+      prisma.achievement.create({
+        data: {
+          goalId: goals[2].id,
+          type: 'consistency',
+          message:
+            'Has realizado aportaciones consistentes por 3 meses consecutivos',
+        },
+      }),
+    ])
+  }
 }
+
 main()
   .then(async () => {
     await prisma.$disconnect()
