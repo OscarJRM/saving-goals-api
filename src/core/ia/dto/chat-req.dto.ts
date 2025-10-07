@@ -21,5 +21,5 @@ export class ChatReqDto {
 
   @IsString()
   @IsOptional()
-  model = 'google/learnlm-1.5-pro-experimental:free'
+  model = 'deepseek/deepseek-chat-v3.1:free'
 }
